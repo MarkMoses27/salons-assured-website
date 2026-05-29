@@ -2,16 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
   BarChart3,
-  BriefcaseBusiness,
+  CheckCircle2,
   ClipboardCheck,
-  FileText,
   GraduationCap,
   Megaphone,
   Rocket,
   Scissors,
-  Sparkles,
   UsersRound,
 } from "lucide-react";
 
@@ -23,6 +20,7 @@ export const metadata: Metadata = {
 
 const servicePillars = [
   {
+    id: "recruitment-staffing",
     number: "01",
     title: "Recruitment & Staffing",
     subtitle: "Find reliable beauty industry professionals.",
@@ -37,6 +35,7 @@ const servicePillars = [
     ],
   },
   {
+    id: "training-development",
     number: "02",
     title: "Training & Staff Development",
     subtitle: "Improve skill, service and team performance.",
@@ -51,6 +50,7 @@ const servicePillars = [
     ],
   },
   {
+    id: "business-systems",
     number: "03",
     title: "Business Systems & Documentation",
     subtitle: "Build structure into daily operations.",
@@ -65,6 +65,7 @@ const servicePillars = [
     ],
   },
   {
+    id: "business-setup",
     number: "04",
     title: "Beauty Business Setup & Launch Support",
     subtitle: "Start stronger with the right structure.",
@@ -79,6 +80,7 @@ const servicePillars = [
     ],
   },
   {
+    id: "digital-growth",
     number: "05",
     title: "Digital Growth & Visibility",
     subtitle: "Make the business easier to find and trust.",
@@ -93,6 +95,7 @@ const servicePillars = [
     ],
   },
   {
+    id: "management-consultancy",
     number: "06",
     title: "Management Consultancy & Business Growth",
     subtitle: "Support for owners, managers and investors.",
@@ -187,7 +190,7 @@ export default function ServicesPage() {
       </section>
 
       {/* Intro / Audience */}
-      <section className="relative overflow-hidden py-18 sm:py-20">
+      <section className="relative overflow-hidden py-20">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_18%,rgba(184,117,134,0.08),transparent_28%),radial-gradient(circle_at_92%_84%,rgba(244,223,229,0.58),transparent_28%)]" />
 
         <div className="relative mx-auto max-w-7xl px-5 sm:px-6">
@@ -251,8 +254,9 @@ export default function ServicesPage() {
 
                 return (
                   <section
+                    id={service.id}
                     key={service.number}
-                    className="grid gap-8 py-10 md:grid-cols-[120px_1fr]"
+                    className="scroll-mt-36 grid gap-8 py-10 md:grid-cols-[120px_1fr]"
                   >
                     <div>
                       <span className="font-serif text-[42px] font-black leading-none text-[#d9a3af]">
@@ -336,8 +340,8 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* Final CTA - one only */}
-      <section className="relative overflow-hidden bg-[#071b33] py-18 text-white sm:py-20">
+      {/* Final CTA */}
+      <section className="relative overflow-hidden bg-[#071b33] py-20 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_20%,rgba(184,117,134,0.28),transparent_28%),radial-gradient(circle_at_92%_80%,rgba(217,163,175,0.16),transparent_30%)]" />
 
         <div className="relative mx-auto max-w-7xl px-5 sm:px-6">

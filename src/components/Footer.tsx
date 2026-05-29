@@ -11,12 +11,12 @@ const companyLinks = [
 ];
 
 const serviceLinks = [
-  { label: "Recruitment & Staffing", href: "/recruitment" },
-  { label: "Training & Staff Development", href: "/training" },
-  { label: "Business Systems & Documentation", href: "/business-systems" },
-  { label: "Beauty Business Setup & Launch", href: "/services" },
-  { label: "Digital Growth & Visibility", href: "/services" },
-  { label: "Management Consultancy & Growth", href: "/services" },
+  { label: "Recruitment & Staffing", href: "/services#recruitment-staffing" },
+  { label: "Training & Staff Development", href: "/services#training-development" },
+  { label: "Business Systems & Documentation", href: "/services#business-systems" },
+  { label: "Beauty Business Setup & Launch", href: "/services#business-setup" },
+  { label: "Digital Growth & Visibility", href: "/services#digital-growth" },
+  { label: "Management Consultancy & Growth", href: "/services#management-consultancy" },
 ];
 
 const audienceLinks = [
@@ -30,7 +30,7 @@ const audienceLinks = [
 const socialLinks = [
   {
     label: "Facebook",
-    href: "#",
+    href: "https://www.facebook.com/salonsassuredkenya/",
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
         <path d="M13.5 21v-7.7H16l.4-3h-2.9V8.4c0-.9.3-1.5 1.6-1.5h1.5V4.2c-.7-.1-1.5-.2-2.3-.2-2.4 0-4.1 1.5-4.1 4.1v2.2H7.5v3h2.7V21h3.3Z" />
@@ -39,7 +39,7 @@ const socialLinks = [
   },
   {
     label: "Instagram",
-    href: "#",
+    href: "https://www.instagram.com/salonsassured/",
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
         <path
@@ -63,7 +63,7 @@ const socialLinks = [
   },
   {
     label: "TikTok",
-    href: "#",
+    href: "https://www.tiktok.com/@salonsassuredkenya",
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
         <path d="M16.6 3c.4 2.4 1.8 3.9 4.1 4v3.2a7.2 7.2 0 0 1-4.1-1.3v6.2c0 3.1-2.1 5.9-5.8 5.9-3.2 0-5.5-2.2-5.5-5.1 0-3.5 2.8-5.5 6.2-5.2v3.3c-1.5-.3-2.8.4-2.8 1.8 0 1.1.9 1.9 2.1 1.9 1.4 0 2.3-.9 2.3-2.7V3h3.5Z" />
@@ -109,13 +109,13 @@ export default function Footer() {
               className="inline-flex items-center gap-4"
               aria-label="Salons Assured Kenya Ltd Home"
             >
-              <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-[#d9a3af]/40 bg-white p-2 shadow-[0_18px_45px_rgba(0,0,0,0.25)] ring-1 ring-white/20">
+              <div className="relative h-20 w-20 shrink-0 overflow-visible">
                 <Image
-                  src="/salons-assured-logo.png"
+                  src="/footer-logo.png"
                   alt="Salons Assured Kenya Ltd"
                   fill
                   sizes="80px"
-                  className="object-contain p-2"
+                  className="object-contain"
                   priority
                 />
               </div>
