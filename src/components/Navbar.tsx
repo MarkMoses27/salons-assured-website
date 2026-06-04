@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type NavItem = {
   label: string;
@@ -52,8 +52,7 @@ const servicesLinks: DropdownItem[] = [
 const resourceLinks: DropdownItem[] = [
   {
     label: "Job Seekers",
-    description:
-      "Apply for beauty industry opportunities through Salons Assured.",
+    description: "Apply for beauty industry opportunities through Salons Assured.",
     href: "/job-seekers",
   },
   {
@@ -100,12 +99,7 @@ function ChevronDownIcon({ active }: { active?: boolean }) {
 
 function MenuIcon() {
   return (
-    <svg
-      className="h-6 w-6"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M4 7h16M4 12h16M4 17h16"
         stroke="currentColor"
@@ -118,12 +112,7 @@ function MenuIcon() {
 
 function CloseIcon() {
   return (
-    <svg
-      className="h-6 w-6"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M6 6l12 12M18 6L6 18"
         stroke="currentColor"
@@ -137,6 +126,26 @@ function CloseIcon() {
 export default function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
+
+  const isHome = pathname === "/";
+  const transparentHome = isHome && !hasScrolled && !isOpen;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setHasScrolled(window.scrollY > 18);
+    };
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -149,46 +158,28 @@ export default function Navbar() {
     pathname.startsWith(item.href)
   );
 
+  const navLinkClass = (active: boolean) =>
+    `relative py-7 text-[14px] font-semibold transition-colors duration-300 after:absolute after:bottom-5 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
+      active
+        ? "text-[#071b33] after:w-full"
+        : "text-[#334155] after:w-0 hover:text-[#071b33] hover:after:w-full"
+    }`;
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#ead5db] bg-white/95 shadow-[0_8px_30px_rgba(7,27,51,0.05)] backdrop-blur-xl">
-      {/* Top bar */}
-      <div className="hidden border-b border-white/10 bg-[#071b33] text-white md:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2.5 text-[13px]">
-          <p className="font-semibold tracking-wide text-white/90">
-            Beauty Industry Recruitment • Training • Consulting
-          </p>
-
-          <div className="flex items-center gap-5 text-white/90">
-            <a
-              href="tel:+254715500268"
-              className="transition-colors duration-300 hover:text-white"
-            >
-              Call/WhatsApp: 0715500268 / 0706551028
-            </a>
-
-            <span className="h-3 w-px bg-white/30" />
-
-            <a
-              href="mailto:info@salonsassured.co.ke"
-              className="transition-colors duration-300 hover:text-white"
-            >
-              info@salonsassured.co.ke
-            </a>
-
-            <span className="h-3 w-px bg-white/30" />
-
-            <Link
-              href="/contact"
-              className="font-bold text-[#d9a3af] transition-colors duration-300 hover:text-white"
-            >
-              Book Consultation
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Main navbar */}
-      <nav className="mx-auto flex h-[92px] max-w-7xl items-center justify-between px-5 lg:px-6">
+    <header
+      className={`z-50 w-full transition-all duration-500 ${
+        isHome ? "fixed left-0 top-0" : "sticky top-0"
+      } ${
+        transparentHome
+          ? "border-transparent bg-transparent shadow-none"
+          : "border-b border-[#ead5db] bg-white/95 shadow-[0_14px_42px_rgba(7,27,51,0.08)] backdrop-blur-xl"
+      }`}
+    >
+      <nav
+        className={`mx-auto flex max-w-7xl items-center justify-between px-5 transition-all duration-500 lg:px-6 ${
+          transparentHome ? "h-[104px]" : "h-[86px]"
+        }`}
+      >
         {/* Brand */}
         <Link
           href="/"
@@ -196,22 +187,31 @@ export default function Navbar() {
           aria-label="Salons Assured Kenya Ltd Home"
           onClick={() => setIsOpen(false)}
         >
-          <div className="relative h-[82px] w-[82px] shrink-0 overflow-visible">
+          <div
+            className={`relative shrink-0 overflow-visible transition-all duration-500 ${
+              transparentHome ? "h-[78px] w-[78px]" : "h-[68px] w-[68px]"
+            }`}
+          >
             <Image
               src="/salons-assured.png"
               alt="Salons Assured Kenya Ltd"
               fill
-              sizes="82px"
+              sizes="80px"
               className="object-contain"
               priority
             />
           </div>
 
           <div className="leading-tight">
-            <p className="text-[17px] font-bold tracking-tight text-[#071b33]">
+            <p
+              className={`font-bold tracking-tight text-[#071b33] transition-all duration-500 ${
+                transparentHome ? "text-[18px]" : "text-[17px]"
+              }`}
+            >
               Salons Assured
             </p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.34em] text-[#b87586]">
+
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.34em] text-[#b87586]">
               Kenya Ltd
             </p>
           </div>
@@ -219,25 +219,11 @@ export default function Navbar() {
 
         {/* Desktop navigation */}
         <div className="hidden items-center gap-8 lg:flex">
-          <Link
-            href="/"
-            className={`relative py-8 text-[14px] font-medium transition-colors duration-300 after:absolute after:bottom-6 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
-              isActive("/")
-                ? "text-[#071b33] after:w-full"
-                : "text-[#334155] after:w-0 hover:text-[#071b33] hover:after:w-full"
-            }`}
-          >
+          <Link href="/" className={navLinkClass(isActive("/"))}>
             Home
           </Link>
 
-          <Link
-            href="/about"
-            className={`relative py-8 text-[14px] font-medium transition-colors duration-300 after:absolute after:bottom-6 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
-              isActive("/about")
-                ? "text-[#071b33] after:w-full"
-                : "text-[#334155] after:w-0 hover:text-[#071b33] hover:after:w-full"
-            }`}
-          >
+          <Link href="/about" className={navLinkClass(isActive("/about"))}>
             About
           </Link>
 
@@ -245,7 +231,7 @@ export default function Navbar() {
           <div className="group relative">
             <Link
               href="/services"
-              className={`relative flex items-center gap-1.5 py-8 text-[14px] font-medium transition-colors duration-300 after:absolute after:bottom-6 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
+              className={`relative flex items-center gap-1.5 py-7 text-[14px] font-semibold transition-colors duration-300 after:absolute after:bottom-5 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
                 isServicesActive
                   ? "text-[#071b33] after:w-full"
                   : "text-[#334155] after:w-0 hover:text-[#071b33] group-hover:after:w-full"
@@ -255,18 +241,18 @@ export default function Navbar() {
               <ChevronDownIcon active={isServicesActive} />
             </Link>
 
-            <div className="invisible absolute left-1/2 top-full w-[720px] -translate-x-1/2 translate-y-3 rounded-2xl border border-[#ead5db] bg-white p-4 opacity-0 shadow-[0_24px_60px_rgba(7,27,51,0.14)] transition-all duration-300 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="invisible absolute left-1/2 top-full w-[720px] -translate-x-1/2 translate-y-4 rounded-2xl border border-[#ead5db] bg-white p-4 opacity-0 shadow-[0_28px_70px_rgba(7,27,51,0.16)] transition-all duration-300 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
               <div className="grid grid-cols-2 gap-2">
                 {servicesLinks.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="rounded-xl p-4 transition-colors duration-300 hover:bg-[#fbf4f6]"
+                    className="rounded-xl p-4 transition duration-300 hover:bg-[#fbf4f6]"
                   >
-                    <p className="text-sm font-bold text-[#071b33]">
+                    <p className="text-[14px] font-extrabold text-[#071b33]">
                       {item.label}
                     </p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                    <p className="mt-1 text-[12px] leading-5 text-slate-600">
                       {item.description}
                     </p>
                   </Link>
@@ -277,20 +263,16 @@ export default function Navbar() {
 
           <Link
             href="/recruitment"
-            className={`relative py-8 text-[14px] font-medium transition-colors duration-300 after:absolute after:bottom-6 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
-              isActive("/recruitment")
-                ? "text-[#071b33] after:w-full"
-                : "text-[#334155] after:w-0 hover:text-[#071b33] hover:after:w-full"
-            }`}
+            className={navLinkClass(isActive("/recruitment"))}
           >
             Recruitment
           </Link>
 
           {/* Resources dropdown */}
           <div className="group relative">
-            <button
-              type="button"
-              className={`relative flex items-center gap-1.5 py-8 text-[14px] font-medium transition-colors duration-300 after:absolute after:bottom-6 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
+            <Link
+              href="/blog"
+              className={`relative flex items-center gap-1.5 py-7 text-[14px] font-semibold transition-colors duration-300 after:absolute after:bottom-5 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
                 isResourcesActive
                   ? "text-[#071b33] after:w-full"
                   : "text-[#334155] after:w-0 hover:text-[#071b33] group-hover:after:w-full"
@@ -298,20 +280,20 @@ export default function Navbar() {
             >
               Resources
               <ChevronDownIcon active={isResourcesActive} />
-            </button>
+            </Link>
 
-            <div className="invisible absolute left-1/2 top-full w-[420px] -translate-x-1/2 translate-y-3 rounded-2xl border border-[#ead5db] bg-white p-3 opacity-0 shadow-[0_24px_60px_rgba(7,27,51,0.14)] transition-all duration-300 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="invisible absolute left-1/2 top-full w-[420px] -translate-x-1/2 translate-y-4 rounded-2xl border border-[#ead5db] bg-white p-4 opacity-0 shadow-[0_28px_70px_rgba(7,27,51,0.16)] transition-all duration-300 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
               <div className="grid gap-2">
                 {resourceLinks.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="rounded-xl p-4 transition-colors duration-300 hover:bg-[#fbf4f6]"
+                    className="rounded-xl p-4 transition duration-300 hover:bg-[#fbf4f6]"
                   >
-                    <p className="text-sm font-bold text-[#071b33]">
+                    <p className="text-[14px] font-extrabold text-[#071b33]">
                       {item.label}
                     </p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                    <p className="mt-1 text-[12px] leading-5 text-slate-600">
                       {item.description}
                     </p>
                   </Link>
@@ -320,14 +302,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          <Link
-            href="/contact"
-            className={`relative py-8 text-[14px] font-medium transition-colors duration-300 after:absolute after:bottom-6 after:left-0 after:h-[2px] after:bg-[#b87586] after:transition-all after:duration-300 ${
-              isActive("/contact")
-                ? "text-[#071b33] after:w-full"
-                : "text-[#334155] after:w-0 hover:text-[#071b33] hover:after:w-full"
-            }`}
-          >
+          <Link href="/contact" className={navLinkClass(isActive("/contact"))}>
             Contact
           </Link>
         </div>
@@ -336,14 +311,14 @@ export default function Navbar() {
         <div className="hidden items-center gap-3 lg:flex">
           <Link
             href="/job-seekers"
-            className="rounded-md border border-[#d7a0ad] bg-white px-6 py-3.5 text-sm font-extrabold text-[#071b33] transition duration-300 hover:border-[#b87586] hover:bg-[#fbf4f6]"
+            className="inline-flex h-12 items-center justify-center rounded-md border border-[#d7a0ad] bg-white/70 px-5 text-[14px] font-extrabold text-[#071b33] transition duration-300 hover:border-[#b87586] hover:bg-[#fbf4f6]"
           >
             Apply for Jobs
           </Link>
 
           <Link
             href="/recruitment"
-            className="rounded-md bg-[#071b33] px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_14px_35px_rgba(7,27,51,0.16)] transition duration-300 hover:bg-[#0d2748]"
+            className="inline-flex h-12 items-center justify-center rounded-md bg-[#071b33] px-5 text-[14px] font-extrabold text-white shadow-[0_12px_28px_rgba(7,27,51,0.18)] transition duration-300 hover:bg-[#0d2748]"
           >
             Request Staff
           </Link>
@@ -352,63 +327,57 @@ export default function Navbar() {
         {/* Mobile menu button */}
         <button
           type="button"
+          aria-label="Toggle navigation menu"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[#ead5db] text-[#071b33] lg:hidden"
-          aria-label="Toggle mobile menu"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-[#ead5db] bg-white/80 text-[#071b33] shadow-sm lg:hidden"
         >
           {isOpen ? <CloseIcon /> : <MenuIcon />}
         </button>
       </nav>
 
       {/* Mobile menu */}
-      {isOpen && (
-        <div className="border-t border-[#ead5db] bg-white px-5 py-5 shadow-[0_20px_40px_rgba(7,27,51,0.08)] lg:hidden">
+      <div
+        className={`overflow-hidden border-t border-[#ead5db] bg-white transition-all duration-500 lg:hidden ${
+          isOpen ? "max-h-[620px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="mx-auto max-w-7xl px-5 py-5">
           <div className="grid gap-2">
-            {mobileLinks.map((item) => (
+            {mobileLinks.map((link) => (
               <Link
-                key={item.href}
-                href={item.href}
+                key={link.href}
+                href={link.href}
                 onClick={() => setIsOpen(false)}
-                className={`rounded-lg px-4 py-3 text-sm font-bold transition ${
-                  isActive(item.href)
+                className={`rounded-xl px-4 py-3 text-[15px] font-bold transition ${
+                  isActive(link.href)
                     ? "bg-[#fbf4f6] text-[#b87586]"
                     : "text-[#071b33] hover:bg-[#fbf4f6]"
                 }`}
               >
-                {item.label}
+                {link.label}
               </Link>
             ))}
           </div>
 
-          <div className="mt-5 border-t border-[#ead5db] pt-5">
-            <p className="px-4 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#b87586]">
-              Services
-            </p>
-
-            <div className="mt-3 grid gap-2">
-              {servicesLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className="rounded-lg px-4 py-3 transition hover:bg-[#fbf4f6]"
-                >
-                  <p className="text-sm font-bold text-[#071b33]">
-                    {item.label}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    {item.description}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
           <div className="mt-5 grid gap-3 border-t border-[#ead5db] pt-5">
+            <a
+              href="tel:+254715500268"
+              className="rounded-xl bg-[#fbf4f6] px-4 py-3 text-sm font-bold text-[#071b33]"
+            >
+              Call/WhatsApp: 0715500268 / 0706551028
+            </a>
+
+            <a
+              href="mailto:info@salonsassured.co.ke"
+              className="rounded-xl bg-[#fbf4f6] px-4 py-3 text-sm font-bold text-[#071b33]"
+            >
+              info@salonsassured.co.ke
+            </a>
+
             <Link
               href="/job-seekers"
               onClick={() => setIsOpen(false)}
-              className="rounded-md border border-[#d7a0ad] bg-white px-5 py-3 text-center text-sm font-extrabold text-[#071b33]"
+              className="inline-flex items-center justify-center rounded-md border border-[#d7a0ad] px-5 py-4 text-sm font-extrabold text-[#071b33]"
             >
               Apply for Jobs
             </Link>
@@ -416,20 +385,13 @@ export default function Navbar() {
             <Link
               href="/recruitment"
               onClick={() => setIsOpen(false)}
-              className="rounded-md bg-[#071b33] px-5 py-3 text-center text-sm font-extrabold text-white"
+              className="inline-flex items-center justify-center rounded-md bg-[#071b33] px-5 py-4 text-sm font-extrabold text-white"
             >
               Request Staff
             </Link>
-
-            <a
-              href="tel:+254715500268"
-              className="rounded-md bg-[#fbf4f6] px-5 py-3 text-center text-sm font-bold text-[#b87586]"
-            >
-              Call/WhatsApp: 0715500268
-            </a>
           </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }
