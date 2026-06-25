@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Apply for Beauty Jobs | Salons Assured Kenya Ltd",
@@ -55,7 +56,7 @@ function FieldLabel({
   children,
   required,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   required?: boolean;
 }) {
   return (
@@ -86,6 +87,7 @@ function SectionTitle({
           <h2 className="font-serif text-[28px] font-black leading-tight tracking-[-0.035em] text-[#071b33] sm:text-[34px]">
             {title}
           </h2>
+
           <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
             {description}
           </p>
@@ -135,6 +137,7 @@ export default function JobSeekersPage() {
           <input type="text" name="_honey" className="hidden" />
 
           <div className="grid gap-10 p-6 sm:p-8 lg:p-10">
+            {/* 01 Personal Details */}
             <section className="grid gap-6">
               <SectionTitle
                 number="01"
@@ -188,6 +191,7 @@ export default function JobSeekersPage() {
               </div>
             </section>
 
+            {/* 02 Role and Availability */}
             <section className="grid gap-6">
               <SectionTitle
                 number="02"
@@ -207,6 +211,7 @@ export default function JobSeekersPage() {
                     <option value="" disabled>
                       Select role
                     </option>
+
                     {roles.map((role) => (
                       <option key={role}>{role}</option>
                     ))}
@@ -282,6 +287,7 @@ export default function JobSeekersPage() {
               </div>
             </section>
 
+            {/* 03 Skills */}
             <section className="grid gap-6">
               <SectionTitle
                 number="03"
@@ -293,7 +299,7 @@ export default function JobSeekersPage() {
                 {skills.map((skill) => (
                   <label
                     key={skill}
-                    className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-[#ead5db]/70 transition hover:-translate-y-0.5 hover:ring-[#d9a3af]"
+                    className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-[#ead5db]/70 transition duration-300 hover:-translate-y-0.5 hover:ring-[#d9a3af]"
                   >
                     <input
                       type="checkbox"
@@ -307,11 +313,12 @@ export default function JobSeekersPage() {
               </div>
             </section>
 
+            {/* 04 Portfolio */}
             <section className="grid gap-6">
               <SectionTitle
                 number="04"
                 title="Portfolio & Work Samples"
-                description="Portfolio links are optional. You may upload work photos instead."
+                description="Portfolio links are optional. You can upload photos of your work instead."
               />
 
               <div className="grid gap-5 md:grid-cols-2">
@@ -370,6 +377,7 @@ export default function JobSeekersPage() {
               </div>
             </section>
 
+            {/* 05 Experience */}
             <section className="grid gap-6">
               <SectionTitle
                 number="05"
@@ -386,6 +394,7 @@ export default function JobSeekersPage() {
             </section>
           </div>
 
+          {/* Submit Area */}
           <div className="border-t border-[#ead5db] bg-[#071b33] p-6 sm:p-8 lg:p-10">
             <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
               <p className="text-sm leading-7 text-white/70">
