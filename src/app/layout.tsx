@@ -1,15 +1,38 @@
-import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import type {
+  Metadata,
+  Viewport,
+} from "next";
+import {
+  Cormorant_Garamond,
+  Manrope,
+} from "next/font/google";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "./globals.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: [
+    "400",
+    "500",
+    "600",
+    "700",
+    "800",
+  ],
+  variable: "--font-sans",
+  display: "swap",
 });
 
-const siteUrl = "https://www.salonsassured.com";
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const siteUrl =
+  "https://www.salonsassured.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -17,7 +40,8 @@ export const metadata: Metadata = {
   title: {
     default:
       "Salons Assured Kenya Ltd | Beauty Industry Recruitment & Business Support",
-    template: "%s | Salons Assured Kenya Ltd",
+    template:
+      "%s | Salons Assured Kenya Ltd",
   },
 
   description:
@@ -42,9 +66,15 @@ export const metadata: Metadata = {
     "spa therapist jobs",
   ],
 
-  authors: [{ name: "Salons Assured Kenya Ltd" }],
+  authors: [
+    {
+      name: "Salons Assured Kenya Ltd",
+    },
+  ],
+
   creator: "Salons Assured Kenya Ltd",
-  publisher: "Salons Assured Kenya Ltd",
+  publisher:
+    "Salons Assured Kenya Ltd",
 
   alternates: {
     canonical: "/",
@@ -54,7 +84,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_KE",
     url: siteUrl,
-    siteName: "Salons Assured Kenya Ltd",
+    siteName:
+      "Salons Assured Kenya Ltd",
     title:
       "Salons Assured Kenya Ltd | Beauty Industry Recruitment & Business Support",
     description:
@@ -81,6 +112,7 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+
     googleBot: {
       index: true,
       follow: true,
@@ -90,7 +122,8 @@ export const metadata: Metadata = {
     },
   },
 
-  category: "Beauty Business Consulting",
+  category:
+    "Beauty Business Consulting",
 };
 
 export const viewport: Viewport = {
@@ -105,10 +138,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${manrope.variable} ${cormorant.variable}`}
+    >
       <body className={manrope.className}>
         <Navbar />
+
         {children}
+
         <Footer />
       </body>
     </html>
