@@ -1,23 +1,8 @@
-function requiredValue(
-  value: string | undefined,
-  errorMessage: string,
-): string {
-  if (!value) {
-    throw new Error(errorMessage);
-  }
+export const projectId =
+  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "abx814ao";
 
-  return value;
-}
-
-export const projectId = requiredValue(
-  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
-  "Missing NEXT_PUBLIC_SANITY_PROJECT_ID",
-);
-
-export const dataset = requiredValue(
-  process.env.NEXT_PUBLIC_SANITY_DATASET,
-  "Missing NEXT_PUBLIC_SANITY_DATASET",
-);
+export const dataset =
+  process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
 
 export const apiVersion =
   process.env.NEXT_PUBLIC_SANITY_API_VERSION || "2026-05-15";
