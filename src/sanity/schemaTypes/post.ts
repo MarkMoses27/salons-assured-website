@@ -41,7 +41,7 @@ export const post = defineType({
           .min(10)
           .max(120)
           .error(
-            "Enter an article title between 10 and 120 characters",
+            "Enter an article title between 10 and 120 characters.",
           ),
     }),
 
@@ -77,7 +77,7 @@ export const post = defineType({
           .min(50)
           .max(220)
           .error(
-            "The summary should be between 50 and 220 characters",
+            "The summary should be between 50 and 220 characters.",
           ),
     }),
 
@@ -116,127 +116,16 @@ export const post = defineType({
     defineField({
       name: "body",
       title: "Article Content",
-      type: "array",
+      type: "articleContent",
       group: "content",
+
+      description:
+        "Build the article using text, images, callouts, statistics, quotes and promotional sections.",
 
       validation: (Rule) =>
         Rule.required()
           .min(1)
-          .error("The article must have content"),
-
-      of: [
-        defineArrayMember({
-          type: "block",
-
-          styles: [
-            {
-              title: "Normal",
-              value: "normal",
-            },
-            {
-              title: "Heading 2 — Main Section",
-              value: "h2",
-            },
-            {
-              title: "Heading 3 — Subsection",
-              value: "h3",
-            },
-            {
-              title: "Heading 4 — Small Heading",
-              value: "h4",
-            },
-            {
-              title: "Editorial Quote",
-              value: "blockquote",
-            },
-          ],
-
-          lists: [
-            {
-              title: "Bullet List",
-              value: "bullet",
-            },
-            {
-              title: "Numbered List",
-              value: "number",
-            },
-          ],
-
-          marks: {
-            decorators: [
-              {
-                title: "Bold",
-                value: "strong",
-              },
-              {
-                title: "Italic",
-                value: "em",
-              },
-              {
-                title: "Underline",
-                value: "underline",
-              },
-            ],
-
-            annotations: [
-              {
-                name: "link",
-                title: "Website Link",
-                type: "object",
-
-                fields: [
-                  defineField({
-                    name: "href",
-                    title: "Website Address",
-                    type: "url",
-
-                    validation: (Rule) =>
-                      Rule.uri({
-                        scheme: [
-                          "http",
-                          "https",
-                          "mailto",
-                          "tel",
-                        ],
-                      }),
-                  }),
-
-                  defineField({
-                    name: "openInNewTab",
-                    title: "Open in New Tab",
-                    type: "boolean",
-                    initialValue: true,
-                  }),
-                ],
-              },
-            ],
-          },
-        }),
-
-        defineArrayMember({
-          type: "image",
-          title: "Article Image",
-
-          options: {
-            hotspot: true,
-          },
-
-          fields: [
-            defineField({
-              name: "alt",
-              title: "Alternative Text",
-              type: "string",
-              validation: (Rule) => Rule.required(),
-            }),
-
-            defineField({
-              name: "caption",
-              title: "Image Caption",
-              type: "string",
-            }),
-          ],
-        }),
-      ],
+          .error("The article must have content."),
     }),
 
     defineField({
@@ -288,7 +177,7 @@ export const post = defineType({
         Rule.integer()
           .min(1)
           .max(2)
-          .error("Featured position must be 1 or 2"),
+          .error("Featured position must be 1 or 2."),
     }),
 
     defineField({
@@ -296,7 +185,12 @@ export const post = defineType({
       title: "Author",
       type: "reference",
       group: "publishing",
-      to: [{type: "author"}],
+
+      to: [
+        {
+          type: "author",
+        },
+      ],
 
       validation: (Rule) => Rule.required(),
     }),
@@ -310,14 +204,19 @@ export const post = defineType({
       of: [
         defineArrayMember({
           type: "reference",
-          to: [{type: "category"}],
+
+          to: [
+            {
+              type: "category",
+            },
+          ],
         }),
       ],
 
       validation: (Rule) =>
         Rule.required()
           .min(1)
-          .error("Select at least one category"),
+          .error("Select at least one category."),
     }),
 
     defineField({
@@ -342,7 +241,7 @@ export const post = defineType({
 
       validation: (Rule) =>
         Rule.max(60).warning(
-          "SEO titles should normally be below 60 characters",
+          "SEO titles should normally be below 60 characters.",
         ),
     }),
 
@@ -358,7 +257,7 @@ export const post = defineType({
 
       validation: (Rule) =>
         Rule.max(160).warning(
-          "SEO descriptions should normally be below 160 characters",
+          "SEO descriptions should normally be below 160 characters.",
         ),
     }),
 
@@ -397,6 +296,7 @@ export const post = defineType({
         },
       ],
     },
+
     {
       title: "Oldest First",
       name: "publishedAtAsc",
@@ -408,6 +308,7 @@ export const post = defineType({
         },
       ],
     },
+
     {
       title: "Title A–Z",
       name: "titleAsc",

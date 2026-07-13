@@ -2,11 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PortableText } from "@portabletext/react";
-import type {
-  PortableTextBlock,
-  PortableTextComponents,
-} from "@portabletext/react";
+import type { PortableTextBlock } from "@portabletext/react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,6 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 
+import ArticlePortableText from "@/components/blog/ArticlePortableText";
 import { client } from "@/sanity/lib/client";
 
 export const revalidate = 60;
@@ -46,8 +43,10 @@ type ArticleBodyBlock = {
   style?: string;
   alt?: string;
   caption?: string;
+
   asset?: {
     url?: string;
+
     metadata?: {
       dimensions?: {
         width?: number;
@@ -56,6 +55,7 @@ type ArticleBodyBlock = {
       };
     };
   };
+
   children?: Array<{
     _key?: string;
     _type?: string;
@@ -120,6 +120,7 @@ const articleQuery = `
       name,
       "role": coalesce(role, position),
       bio,
+
       "imageUrl": coalesce(
         image.asset->url,
         photo.asset->url,
@@ -135,10 +136,13 @@ const articleQuery = `
 
     "body": coalesce(body, content)[] {
       ...,
+
       _type == "image" => {
         ...,
+
         asset->{
           url,
+
           metadata {
             dimensions
           }
@@ -225,22 +229,33 @@ function getBlockText(block: ArticleBodyBlock) {
   );
 }
 
-function calculateReadingTime(body?: ArticleBodyBlock[]) {
+function calculateReadingTime(
+  body?: ArticleBodyBlock[],
+) {
   if (!body?.length) {
     return 1;
   }
 
-  const wordCount = body.reduce((total, block) => {
-    const text = getBlockText(block);
+  const wordCount = body.reduce(
+    (total, block) => {
+      const text = getBlockText(block);
 
-    if (!text) {
-      return total;
-    }
+      if (!text) {
+        return total;
+      }
 
-    return total + text.split(/\s+/).filter(Boolean).length;
-  }, 0);
+      return (
+        total +
+        text.split(/\s+/).filter(Boolean).length
+      );
+    },
+    0,
+  );
 
-  return Math.max(1, Math.ceil(wordCount / 220));
+  return Math.max(
+    1,
+    Math.ceil(wordCount / 220),
+  );
 }
 
 function buildTableOfContents(
@@ -254,7 +269,8 @@ function buildTableOfContents(
     .filter(
       (block) =>
         block._type === "block" &&
-        (block.style === "h2" || block.style === "h3"),
+        (block.style === "h2" ||
+          block.style === "h3"),
     )
     .map((block) => {
       const title = getBlockText(block);
@@ -268,197 +284,44 @@ function buildTableOfContents(
     .filter((item) => item.title);
 }
 
-function getPortableTextComponents(): PortableTextComponents {
-  return {
-    block: {
-      normal: ({ children }) => (
-        <p className="mb-7 text-[17px] leading-[1.95] text-[#334155] md:text-[18px]">
-          {children}
-        </p>
-      ),
-
-      h2: ({ children, value }) => {
-        const headingText = getBlockText(
-          value as ArticleBodyBlock,
-        );
-
-        return (
-          <h2
-            id={slugifyHeading(headingText)}
-            className="scroll-mt-36 border-t border-[#ead5db] pt-10 font-serif text-[31px] font-black leading-[1.15] tracking-[-0.035em] text-[#071b33] first:border-t-0 first:pt-0 md:text-[39px]"
-          >
-            {children}
-          </h2>
-        );
-      },
-
-      h3: ({ children, value }) => {
-        const headingText = getBlockText(
-          value as ArticleBodyBlock,
-        );
-
-        return (
-          <h3
-            id={slugifyHeading(headingText)}
-            className="scroll-mt-36 pt-3 font-serif text-[25px] font-black leading-tight tracking-[-0.025em] text-[#071b33] md:text-[29px]"
-          >
-            {children}
-          </h3>
-        );
-      },
-
-      h4: ({ children }) => (
-        <h4 className="pt-2 text-[18px] font-extrabold leading-7 text-[#071b33] md:text-[20px]">
-          {children}
-        </h4>
-      ),
-
-      blockquote: ({ children }) => (
-        <blockquote className="my-10 border-l-[3px] border-[#b87586] bg-[#fbf4f6] px-6 py-7 font-serif text-[23px] font-bold italic leading-[1.55] text-[#071b33] md:px-8 md:text-[27px]">
-          {children}
-        </blockquote>
-      ),
-    },
-
-    list: {
-      bullet: ({ children }) => (
-        <ul className="mb-8 ml-1 space-y-4">
-          {children}
-        </ul>
-      ),
-
-      number: ({ children }) => (
-        <ol className="mb-8 ml-1 space-y-4 [counter-reset:article-list]">
-          {children}
-        </ol>
-      ),
-    },
-
-    listItem: {
-      bullet: ({ children }) => (
-        <li className="relative pl-7 text-[17px] leading-8 text-[#334155] before:absolute before:left-0 before:top-[13px] before:h-2 before:w-2 before:rounded-full before:bg-[#b87586] md:text-[18px]">
-          {children}
-        </li>
-      ),
-
-      number: ({ children }) => (
-        <li className="relative pl-10 text-[17px] leading-8 text-[#334155] before:absolute before:left-0 before:top-0 before:flex before:h-7 before:w-7 before:items-center before:justify-center before:rounded-full before:bg-[#071b33] before:text-[11px] before:font-extrabold before:text-white before:[content:counter(article-list)] [counter-increment:article-list] md:text-[18px]">
-          {children}
-        </li>
-      ),
-    },
-
-    marks: {
-      strong: ({ children }) => (
-        <strong className="font-extrabold text-[#071b33]">
-          {children}
-        </strong>
-      ),
-
-      em: ({ children }) => (
-        <em className="italic text-[#475569]">
-          {children}
-        </em>
-      ),
-
-      link: ({ children, value }) => {
-        const href =
-          typeof value?.href === "string" ? value.href : "#";
-
-        const isExternal =
-          href.startsWith("http://") ||
-          href.startsWith("https://");
-
-        return (
-          <a
-            href={href}
-            target={isExternal ? "_blank" : undefined}
-            rel={isExternal ? "noopener noreferrer" : undefined}
-            className="font-bold text-[#b87586] underline decoration-[#d9a3af] decoration-1 underline-offset-4 transition-colors hover:text-[#071b33]"
-          >
-            {children}
-          </a>
-        );
-      },
-    },
-
-    types: {
-      image: ({ value }) => {
-        const image = value as ArticleBodyBlock;
-        const imageUrl = image.asset?.url;
-
-        if (!imageUrl) {
-          return null;
-        }
-
-        const width =
-          image.asset?.metadata?.dimensions?.width ?? 1200;
-
-        const height =
-          image.asset?.metadata?.dimensions?.height ?? 800;
-
-        return (
-          <figure className="my-12">
-            <div className="overflow-hidden rounded-[22px] bg-[#f2e9ec]">
-              <Image
-                src={imageUrl}
-                alt={image.alt || "Salons Assured article image"}
-                width={width}
-                height={height}
-                sizes="(max-width: 768px) 100vw, 760px"
-                className="h-auto w-full object-cover"
-              />
-            </div>
-
-            {image.caption && (
-              <figcaption className="mt-3 border-l-2 border-[#d9a3af] pl-3 text-[12px] leading-5 text-slate-500">
-                {image.caption}
-              </figcaption>
-            )}
-          </figure>
-        );
-      },
-    },
-
-    unknownType: ({ value }) => {
-      console.warn(
-        `Unknown Portable Text block type: ${value._type}`,
-      );
-
-      return null;
-    },
-  };
-}
-
 async function getArticle(slug: string) {
-  return client.fetch<BlogPost | null>(articleQuery, {
-    slug,
-  });
+  return client.fetch<BlogPost | null>(
+    articleQuery,
+    {
+      slug,
+    },
+  );
 }
 
-async function getRelatedPosts(post: BlogPost) {
+async function getRelatedPosts(
+  post: BlogPost,
+) {
   const categoryIds =
     post.categories
       ?.map((category) => category._id)
       .filter(Boolean) ?? [];
 
   if (categoryIds.length > 0) {
-    const categoryPosts = await client.fetch<RelatedPost[]>(
-      relatedByCategoryQuery,
-      {
-        postId: post._id,
-        categoryIds,
-      },
-    );
+    const categoryPosts =
+      await client.fetch<RelatedPost[]>(
+        relatedByCategoryQuery,
+        {
+          postId: post._id,
+          categoryIds,
+        },
+      );
 
     if (categoryPosts.length > 0) {
       return categoryPosts;
     }
   }
 
-  return client.fetch<RelatedPost[]>(latestPostsQuery, {
-    postId: post._id,
-  });
+  return client.fetch<RelatedPost[]>(
+    latestPostsQuery,
+    {
+      postId: post._id,
+    },
+  );
 }
 
 export async function generateMetadata({
@@ -469,7 +332,8 @@ export async function generateMetadata({
 
   if (!article) {
     return {
-      title: "Article Not Found | Salons Assured Kenya",
+      title:
+        "Article Not Found | Salons Assured Kenya",
     };
   }
 
@@ -486,12 +350,14 @@ export async function generateMetadata({
       description,
       type: "article",
       publishedTime: article.publishedAt,
+
       images: article.coverImageUrl
         ? [
             {
               url: article.coverImageUrl,
               alt:
-                article.coverImageAlt || article.title,
+                article.coverImageAlt ||
+                article.title,
             },
           ]
         : [],
@@ -510,16 +376,21 @@ export default async function BlogArticlePage({
     notFound();
   }
 
-  const relatedPosts = await getRelatedPosts(article);
+  const relatedPosts =
+    await getRelatedPosts(article);
 
-  const readingTime = calculateReadingTime(article.body);
-  const tableOfContents = buildTableOfContents(article.body);
-  const portableTextComponents =
-    getPortableTextComponents();
+  const readingTime =
+    calculateReadingTime(article.body);
 
-  const primaryCategory = article.categories?.[0]?.title;
+  const tableOfContents =
+    buildTableOfContents(article.body);
+
+  const primaryCategory =
+    article.categories?.[0]?.title;
+
   const authorName =
-    article.author?.name || "Salons Assured Editorial Team";
+    article.author?.name ||
+    "Salons Assured Editorial Team";
 
   return (
     <main className="min-h-screen bg-white text-[#071b33]">
@@ -556,7 +427,10 @@ export default async function BlogArticlePage({
                 <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-[#ead5db] bg-white">
                   {article.author?.imageUrl ? (
                     <Image
-                      src={article.author.imageUrl}
+                      src={
+                        article.author
+                          .imageUrl
+                      }
                       alt={authorName}
                       fill
                       sizes="40px"
@@ -576,13 +450,17 @@ export default async function BlogArticlePage({
 
               <span className="inline-flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-[#b87586]" />
-                {formatDate(article.publishedAt)}
+
+                {formatDate(
+                  article.publishedAt,
+                )}
               </span>
 
               <span className="hidden h-1 w-1 rounded-full bg-[#cbd5e1] sm:block" />
 
               <span className="inline-flex items-center gap-2">
                 <Clock3 className="h-4 w-4 text-[#b87586]" />
+
                 {readingTime} min read
               </span>
             </div>
@@ -628,7 +506,9 @@ export default async function BlogArticlePage({
                   </dt>
 
                   <dd className="mt-1 text-[12px] font-bold leading-5 text-[#071b33]">
-                    {formatDate(article.publishedAt)}
+                    {formatDate(
+                      article.publishedAt,
+                    )}
                   </dd>
                 </div>
 
@@ -643,7 +523,8 @@ export default async function BlogArticlePage({
                 </div>
 
                 {article.categories &&
-                  article.categories.length > 0 && (
+                  article.categories.length >
+                    0 && (
                     <div>
                       <dt className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
                         Topics
@@ -653,10 +534,14 @@ export default async function BlogArticlePage({
                         {article.categories.map(
                           (category) => (
                             <span
-                              key={category._id}
+                              key={
+                                category._id
+                              }
                               className="rounded-full bg-[#fbf4f6] px-2.5 py-1 text-[10px] font-bold text-[#b87586]"
                             >
-                              {category.title}
+                              {
+                                category.title
+                              }
                             </span>
                           ),
                         )}
@@ -679,22 +564,22 @@ export default async function BlogArticlePage({
 
             {article.body?.length ? (
               <div className="space-y-8">
-                <PortableText
+                <ArticlePortableText
                   value={
                     article.body as PortableTextBlock[]
                   }
-                  components={portableTextComponents}
                 />
               </div>
             ) : (
               <div className="border-y border-[#ead5db] py-14 text-center">
                 <p className="font-serif text-2xl font-black text-[#071b33]">
-                  This article is being prepared.
+                  This article is being
+                  prepared.
                 </p>
 
                 <p className="mt-3 text-sm leading-6 text-slate-500">
-                  Please check again soon for the complete
-                  story.
+                  Please check again soon
+                  for the complete story.
                 </p>
               </div>
             )}
@@ -705,7 +590,10 @@ export default async function BlogArticlePage({
                 <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#fbf4f6]">
                   {article.author?.imageUrl ? (
                     <Image
-                      src={article.author.imageUrl}
+                      src={
+                        article.author
+                          .imageUrl
+                      }
                       alt={authorName}
                       fill
                       sizes="80px"
@@ -727,7 +615,10 @@ export default async function BlogArticlePage({
 
                   {article.author?.role && (
                     <p className="mt-1 text-[12px] font-bold text-slate-500">
-                      {article.author.role}
+                      {
+                        article.author
+                          .role
+                      }
                     </p>
                   )}
 
@@ -743,26 +634,30 @@ export default async function BlogArticlePage({
           {/* RIGHT CONTENT NAVIGATION */}
           <aside className="hidden lg:block">
             <div className="sticky top-36 space-y-6">
-              {tableOfContents.length > 0 && (
+              {tableOfContents.length >
+                0 && (
                 <div className="border-t border-[#ead5db] pt-5">
                   <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#b87586]">
                     In This Article
                   </p>
 
                   <nav className="mt-5 space-y-3">
-                    {tableOfContents.map((item) => (
-                      <a
-                        key={`${item.id}-${item.title}`}
-                        href={`#${item.id}`}
-                        className={`block border-l border-[#ead5db] text-[12px] font-bold leading-5 text-slate-500 transition-colors hover:border-[#b87586] hover:text-[#071b33] ${
-                          item.level === "h3"
-                            ? "pl-6"
-                            : "pl-4"
-                        }`}
-                      >
-                        {item.title}
-                      </a>
-                    ))}
+                    {tableOfContents.map(
+                      (item) => (
+                        <a
+                          key={`${item.id}-${item.title}`}
+                          href={`#${item.id}`}
+                          className={`block border-l border-[#ead5db] text-[12px] font-bold leading-5 text-slate-500 transition-colors hover:border-[#b87586] hover:text-[#071b33] ${
+                            item.level ===
+                            "h3"
+                              ? "pl-6"
+                              : "pl-4"
+                          }`}
+                        >
+                          {item.title}
+                        </a>
+                      ),
+                    )}
                   </nav>
                 </div>
               )}
@@ -775,12 +670,15 @@ export default async function BlogArticlePage({
                 </p>
 
                 <h3 className="mt-3 font-serif text-[24px] font-black leading-tight tracking-[-0.03em]">
-                  Need professional beauty business support?
+                  Need professional beauty
+                  business support?
                 </h3>
 
                 <p className="mt-3 text-[12px] leading-6 text-white/65">
-                  Speak to Salons Assured about staffing,
-                  systems, training and business growth.
+                  Speak to Salons Assured
+                  about staffing, systems,
+                  training and business
+                  growth.
                 </p>
 
                 <Link
@@ -788,6 +686,7 @@ export default async function BlogArticlePage({
                   className="mt-5 inline-flex items-center gap-2 border-b border-[#e3b4bf] pb-1 text-[11px] font-extrabold text-white transition-colors hover:text-[#e3b4bf]"
                 >
                   Talk to our team
+
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -805,11 +704,13 @@ export default async function BlogArticlePage({
             </p>
 
             <h2 className="mt-2 font-serif text-[28px] font-black tracking-[-0.035em] text-[#071b33] md:text-[34px]">
-              Practical insight for the beauty industry.
+              Practical insight for the
+              beauty industry.
             </h2>
 
             <p className="mt-2 text-[13px] leading-6 text-slate-600">
-              Follow industry guidance, business advice and
+              Follow industry guidance,
+              business advice and
               professional opportunities.
             </p>
           </div>
@@ -835,7 +736,8 @@ export default async function BlogArticlePage({
                 </p>
 
                 <h2 className="mt-3 font-serif text-[34px] font-black tracking-[-0.04em] text-[#071b33] md:text-[43px]">
-                  More from our editorial desk
+                  More from our editorial
+                  desk
                 </h2>
               </div>
 
@@ -844,62 +746,75 @@ export default async function BlogArticlePage({
                 className="inline-flex items-center gap-2 text-[12px] font-extrabold text-[#071b33] transition-colors hover:text-[#b87586]"
               >
                 View all insights
+
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
             <div className="divide-y divide-[#ead5db]">
-              {relatedPosts.map((post, index) => (
-                <article
-                  key={post._id}
-                  className="grid gap-6 py-8 md:grid-cols-[70px_minmax(0,1fr)_260px] md:items-center"
-                >
-                  <span className="font-serif text-[28px] font-black text-[#d7c3c8]">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
+              {relatedPosts.map(
+                (post, index) => (
+                  <article
+                    key={post._id}
+                    className="grid gap-6 py-8 md:grid-cols-[70px_minmax(0,1fr)_260px] md:items-center"
+                  >
+                    <span className="font-serif text-[28px] font-black text-[#d7c3c8]">
+                      {String(
+                        index + 1,
+                      ).padStart(2, "0")}
+                    </span>
 
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#b87586]">
-                      {post.category && (
-                        <span>{post.category}</span>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#b87586]">
+                        {post.category && (
+                          <span>
+                            {post.category}
+                          </span>
+                        )}
+
+                        <span className="h-1 w-1 rounded-full bg-[#cbd5e1]" />
+
+                        <span className="text-slate-400">
+                          {formatDate(
+                            post.publishedAt,
+                          )}
+                        </span>
+                      </div>
+
+                      <Link
+                        href={`/blog/${post.slug}`}
+                      >
+                        <h3 className="mt-3 max-w-[680px] font-serif text-[27px] font-black leading-tight tracking-[-0.035em] text-[#071b33] transition-colors hover:text-[#b87586] md:text-[32px]">
+                          {post.title}
+                        </h3>
+                      </Link>
+
+                      {post.excerpt && (
+                        <p className="mt-3 line-clamp-2 max-w-[690px] text-[13px] leading-6 text-slate-500">
+                          {post.excerpt}
+                        </p>
                       )}
-
-                      <span className="h-1 w-1 rounded-full bg-[#cbd5e1]" />
-
-                      <span className="text-slate-400">
-                        {formatDate(post.publishedAt)}
-                      </span>
                     </div>
 
-                    <Link href={`/blog/${post.slug}`}>
-                      <h3 className="mt-3 max-w-[680px] font-serif text-[27px] font-black leading-tight tracking-[-0.035em] text-[#071b33] transition-colors hover:text-[#b87586] md:text-[32px]">
-                        {post.title}
-                      </h3>
-                    </Link>
-
-                    {post.excerpt && (
-                      <p className="mt-3 line-clamp-2 max-w-[690px] text-[13px] leading-6 text-slate-500">
-                        {post.excerpt}
-                      </p>
+                    {post.coverImageUrl && (
+                      <Link
+                        href={`/blog/${post.slug}`}
+                        className="relative aspect-[16/9] overflow-hidden rounded-[16px] bg-[#f2e9ec]"
+                      >
+                        <Image
+                          src={
+                            post.coverImageUrl
+                          }
+                          alt={post.title}
+                          fill
+                          sizes="260px"
+                          className="object-cover transition-transform duration-500 hover:scale-105"
+                        />
+                      </Link>
                     )}
-                  </div>
-
-                  {post.coverImageUrl && (
-                    <Link
-                      href={`/blog/${post.slug}`}
-                      className="relative aspect-[16/9] overflow-hidden rounded-[16px] bg-[#f2e9ec]"
-                    >
-                      <Image
-                        src={post.coverImageUrl}
-                        alt={post.title}
-                        fill
-                        sizes="260px"
-                        className="object-cover transition-transform duration-500 hover:scale-105"
-                      />
-                    </Link>
-                  )}
-                </article>
-              ))}
+                  </article>
+                ),
+              )}
             </div>
           </div>
         </section>
