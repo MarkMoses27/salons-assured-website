@@ -5,107 +5,323 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowRight,
   ArrowUpRight,
-  BriefcaseBusiness,
   ChevronDown,
-  Mail,
-  MapPin,
   Menu,
-  Phone,
-  Sparkles,
-  UsersRound,
   X,
 } from "lucide-react";
 
-const serviceLinks = [
+type DropdownName =
+  | "services"
+  | "audiences"
+  | "insights"
+  | null;
+
+type DropdownLink = {
+  label: string;
+  href: string;
+};
+
+const serviceLinks: DropdownLink[] = [
   {
     label: "Recruitment & Staffing",
     href: "/recruitment",
-    description:
-      "Professional staffing support for salons, spas, barbershops and beauty brands.",
   },
   {
-    label: "Training & Staff Development",
+    label: "Training & Development",
     href: "/services#training-development",
-    description:
-      "Improve technical skills, customer experience and staff performance.",
   },
   {
-    label: "Business Systems & Documentation",
+    label: "Business Systems",
     href: "/services#business-systems",
-    description:
-      "Policies, procedures, forms and operating systems for beauty businesses.",
   },
   {
-    label: "Beauty Business Setup & Launch",
+    label: "Business Setup & Launch",
     href: "/services#business-setup",
-    description:
-      "Practical support for launching salons, spas and beauty enterprises.",
   },
   {
-    label: "Digital Growth & Visibility",
+    label: "Digital Growth",
     href: "/services#digital-growth",
-    description:
-      "Strengthen your online presence, visibility and customer acquisition.",
   },
   {
-    label: "Management Consultancy & Growth",
+    label: "Management Consultancy",
     href: "/services#management-consultancy",
-    description:
-      "Improve leadership, operations, profitability and sustainable growth.",
   },
 ];
 
-const resourceLinks = [
+const audienceLinks: DropdownLink[] = [
   {
-    label: "For Investors",
-    href: "/investors",
-    description: "Beauty-sector opportunities and business insights.",
+    label: "Business Owners",
+    href: "/business-owners",
   },
   {
-    label: "For Job Seekers",
+    label: "Investors",
+    href: "/investors",
+  },
+  {
+    label: "Job Seekers",
     href: "/job-seekers",
-    description: "Explore beauty-industry career opportunities.",
+  },
+];
+
+const insightLinks: DropdownLink[] = [
+  {
+    label: "Blog & Insights",
+    href: "/blog",
   },
   {
     label: "Events",
     href: "/events",
-    description: "Training sessions, networking and industry events.",
   },
 ];
 
-const mobileMainLinks = [
-  { label: "Home", href: "/" },
-  { label: "About Us", href: "/about" },
-  { label: "Services", href: "/services" },
-  { label: "Business Owners", href: "/business-owners" },
-  { label: "Blog", href: "/blog" },
-  { label: "Contact", href: "/contact" },
+const mobileLinks: DropdownLink[] = [
+  {
+    label: "About",
+    href: "/about",
+  },
+  {
+    label: "Services",
+    href: "/services",
+  },
+  {
+    label: "Business Owners",
+    href: "/business-owners",
+  },
+  {
+    label: "Investors",
+    href: "/investors",
+  },
+  {
+    label: "Job Seekers",
+    href: "/job-seekers",
+  },
+  {
+    label: "Blog & Insights",
+    href: "/blog",
+  },
+  {
+    label: "Events",
+    href: "/events",
+  },
+  {
+    label: "Contact",
+    href: "/contact",
+  },
 ];
 
-type DropdownName = "services" | "resources" | null;
+const overlayRoutes = [
+  "/",
+  "/about",
+  "/services",
+  "/recruitment",
+  "/business-owners",
+  "/investors",
+  "/events",
+];
+
+type DesktopDropdownProps = {
+  name: Exclude<DropdownName, null>;
+  label: string;
+  eyebrow: string;
+  links: DropdownLink[];
+  active: boolean;
+  activeDropdown: DropdownName;
+  width?: string;
+  onOpen: (
+    name: Exclude<DropdownName, null>,
+  ) => void;
+  onClose: () => void;
+  onToggle: (
+    name: Exclude<DropdownName, null>,
+  ) => void;
+  isActive: (href: string) => boolean;
+};
+
+function DesktopDropdown({
+  name,
+  label,
+  eyebrow,
+  links,
+  active,
+  activeDropdown,
+  width = "w-[340px]",
+  onOpen,
+  onClose,
+  onToggle,
+  isActive,
+}: DesktopDropdownProps) {
+  const isOpen =
+    activeDropdown === name;
+
+  return (
+    <div
+      className="relative flex h-full items-center"
+      onMouseEnter={() => onOpen(name)}
+      onMouseLeave={onClose}
+    >
+      <button
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        onClick={() => onToggle(name)}
+        className={[
+          "group relative flex h-full items-center gap-2",
+          "text-[13px] font-extrabold tracking-[-0.015em]",
+          "transition-colors duration-300",
+          active
+            ? "text-[#b87586]"
+            : "text-[#071b33]/85 hover:text-[#071b33]",
+        ].join(" ")}
+      >
+        {label}
+
+        <ChevronDown
+          className={[
+            "h-3.5 w-3.5 transition-transform duration-300",
+            isOpen ? "rotate-180" : "",
+          ].join(" ")}
+          strokeWidth={2.2}
+        />
+
+        <span
+          className={[
+            "absolute bottom-[12px] left-1/2 h-1.5 w-1.5",
+            "-translate-x-1/2 rounded-full bg-[#b87586]",
+            "transition-all duration-300",
+            active
+              ? "scale-100 opacity-100"
+              : "scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100",
+          ].join(" ")}
+        />
+      </button>
+
+      <div
+        className={[
+          "absolute left-1/2 top-full z-50",
+          "-translate-x-1/2 pt-3",
+          width,
+          "transition-all duration-200",
+          isOpen
+            ? "visible translate-y-0 opacity-100"
+            : "invisible translate-y-2 opacity-0",
+        ].join(" ")}
+        onMouseEnter={() => onOpen(name)}
+        onMouseLeave={onClose}
+      >
+        <div className="overflow-hidden rounded-[18px] border border-[#ead5db] bg-white p-2 shadow-[0_28px_90px_rgba(7,27,51,0.18)]">
+          <div className="px-4 pb-3 pt-3">
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.25em] text-[#b87586]">
+              {eyebrow}
+            </p>
+          </div>
+
+          <div className="border-t border-[#ead5db]">
+            {links.map((link, index) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={[
+                  "group flex items-center justify-between gap-5",
+                  "border-b border-[#ead5db] px-4 py-4",
+                  "transition-colors duration-300",
+                  "last:border-b-0 hover:bg-[#fbf4f6]",
+                  isActive(link.href)
+                    ? "bg-[#fbf4f6]"
+                    : "",
+                ].join(" ")}
+              >
+                <div className="flex items-center gap-4">
+                  <span className="font-serif text-[14px] font-black text-[#d9a3af]">
+                    {String(index + 1).padStart(
+                      2,
+                      "0",
+                    )}
+                  </span>
+
+                  <span
+                    className={[
+                      "text-[13px] font-extrabold",
+                      "transition-colors duration-300",
+                      isActive(link.href)
+                        ? "text-[#b87586]"
+                        : "text-[#071b33] group-hover:text-[#b87586]",
+                    ].join(" ")}
+                  >
+                    {link.label}
+                  </span>
+                </div>
+
+                <ArrowUpRight
+                  className="h-4 w-4 text-[#b87586] transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  strokeWidth={2}
+                />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Navbar() {
   const pathname = usePathname();
 
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const headerRef =
+    useRef<HTMLElement | null>(null);
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] =
-    useState<DropdownName>(null);
-  const [hasScrolled, setHasScrolled] = useState(false);
+  const closeTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null,
+    );
+
+  const [isOpen, setIsOpen] =
+    useState(false);
+
+  const [
+    activeDropdown,
+    setActiveDropdown,
+  ] = useState<DropdownName>(null);
+
+  const [hasScrolled, setHasScrolled] =
+    useState(false);
+
+  const isOverlayRoute =
+    overlayRoutes.some((route) => {
+      if (route === "/") {
+        return pathname === "/";
+      }
+
+      return (
+        pathname === route ||
+        pathname.startsWith(`${route}/`)
+      );
+    });
 
   useEffect(() => {
     const handleScroll = () => {
-      setHasScrolled(window.scrollY > 12);
+      setHasScrolled(
+        window.scrollY > 20,
+      );
     };
 
     handleScroll();
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      {
+        passive: true,
+      },
+    );
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener(
+        "scroll",
+        handleScroll,
+      );
     };
   }, []);
 
@@ -115,74 +331,79 @@ export default function Navbar() {
   }, [pathname]);
 
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
+    const handleEscape = (
+      event: KeyboardEvent,
+    ) => {
       if (event.key === "Escape") {
         setIsOpen(false);
         setActiveDropdown(null);
       }
     };
 
-    window.addEventListener("keydown", handleEscape);
+    const handleOutsideClick = (
+      event: PointerEvent,
+    ) => {
+      if (
+        headerRef.current &&
+        !headerRef.current.contains(
+          event.target as Node,
+        )
+      ) {
+        setActiveDropdown(null);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleEscape,
+    );
+
+    document.addEventListener(
+      "pointerdown",
+      handleOutsideClick,
+    );
 
     return () => {
-      window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener(
+        "keydown",
+        handleEscape,
+      );
+
+      document.removeEventListener(
+        "pointerdown",
+        handleOutsideClick,
+      );
     };
   }, []);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const previousOverflow =
+      document.body.style.overflow;
 
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow =
+        "hidden";
     }
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow =
+        previousOverflow;
     };
   }, [isOpen]);
 
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
+        clearTimeout(
+          closeTimerRef.current,
+        );
       }
     };
   }, []);
 
-  const openDropdown = (
-    dropdown: Exclude<DropdownName, null>,
-  ) => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-    }
-
-    setActiveDropdown(dropdown);
-  };
-
-  const toggleDropdown = (
-    dropdown: Exclude<DropdownName, null>,
-  ) => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-    }
-
-    setActiveDropdown((current) =>
-      current === dropdown ? null : dropdown,
-    );
-  };
-
-  const closeDropdownSlowly = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-    }
-
-    closeTimerRef.current = setTimeout(() => {
-      setActiveDropdown(null);
-    }, 220);
-  };
-
   const isActive = (href: string) => {
-    const cleanHref = href.split("#")[0];
+    const cleanHref =
+      href.split("#")[0];
 
     if (cleanHref === "/") {
       return pathname === "/";
@@ -190,619 +411,381 @@ export default function Navbar() {
 
     return (
       pathname === cleanHref ||
-      pathname.startsWith(`${cleanHref}/`)
+      pathname.startsWith(
+        `${cleanHref}/`,
+      )
     );
   };
 
-  const isServicesActive =
+  const groupActive = (
+    links: DropdownLink[],
+  ) => {
+    return links.some((link) =>
+      isActive(link.href),
+    );
+  };
+
+  const servicesActive =
     pathname === "/services" ||
     pathname.startsWith("/services/") ||
     pathname === "/recruitment" ||
-    pathname.startsWith("/recruitment/");
+    pathname.startsWith(
+      "/recruitment/",
+    );
 
-  const isResourcesActive = resourceLinks.some((link) =>
-    isActive(link.href),
-  );
+  const openDropdown = (
+    name: Exclude<
+      DropdownName,
+      null
+    >,
+  ) => {
+    if (closeTimerRef.current) {
+      clearTimeout(
+        closeTimerRef.current,
+      );
+    }
 
-  const navigationLinkClass = (href: string) => {
+    setActiveDropdown(name);
+  };
+
+  const closeDropdownSlowly = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(
+        closeTimerRef.current,
+      );
+    }
+
+    closeTimerRef.current =
+      setTimeout(() => {
+        setActiveDropdown(null);
+      }, 180);
+  };
+
+  const toggleDropdown = (
+    name: Exclude<
+      DropdownName,
+      null
+    >,
+  ) => {
+    setActiveDropdown((current) =>
+      current === name ? null : name,
+    );
+  };
+
+  const desktopLinkClass = (
+    href: string,
+  ) => {
     const active = isActive(href);
 
     return [
-      "group relative inline-flex h-full items-center px-2",
-      "text-[13px] font-bold tracking-[-0.01em]",
+      "group relative flex h-full items-center",
+      "text-[13px] font-extrabold tracking-[-0.015em]",
       "transition-colors duration-300",
       active
         ? "text-[#b87586]"
-        : "text-[#071b33]/75 hover:text-[#b87586]",
+        : "text-[#071b33]/85 hover:text-[#071b33]",
     ].join(" ");
   };
 
-  const navigationUnderlineClass = (active: boolean) =>
-    [
-      "absolute bottom-[19px] left-2 right-2 h-[2px]",
-      "origin-left rounded-full bg-[#b87586]",
-      "transition-transform duration-300",
-      active
-        ? "scale-x-100"
-        : "scale-x-0 group-hover:scale-x-100",
-    ].join(" ");
-
-  const dropdownButtonClass = (active: boolean) =>
-    [
-      "group relative inline-flex h-full items-center gap-1 px-2",
-      "text-[13px] font-bold tracking-[-0.01em]",
-      "transition-colors duration-300",
-      active
-        ? "text-[#b87586]"
-        : "text-[#071b33]/75 hover:text-[#b87586]",
-    ].join(" ");
-
   return (
-    <header
-      className={[
-        "sticky left-0 top-0 z-50 w-full",
-        "border-b border-[#ead5db]/75",
-        "bg-white/95 text-[#071b33] backdrop-blur-xl",
-        "transition-shadow duration-300",
-        hasScrolled
-          ? "shadow-[0_16px_45px_rgba(7,27,51,0.10)]"
-          : "shadow-[0_5px_20px_rgba(7,27,51,0.045)]",
-      ].join(" ")}
-    >
-      {/* CONTACT BAR */}
-      <div className="hidden border-b border-[#ead5db]/65 bg-[#fbf4f6] md:block">
-        <div className="mx-auto flex h-9 w-full max-w-[1320px] items-center justify-between px-5 text-[11px] font-semibold text-slate-600 lg:px-7">
-          <div className="flex items-center gap-5">
-            <a
-              href="tel:+254715500268"
-              className="inline-flex items-center gap-2 whitespace-nowrap transition-colors hover:text-[#b87586]"
-            >
-              <Phone
-                className="h-3.5 w-3.5 text-[#b87586]"
-                strokeWidth={2}
-              />
-
-              <span>0715 500 268 / 0706 551 028</span>
-            </a>
-
-            <a
-              href="mailto:info@salonsassured.co.ke"
-              className="inline-flex items-center gap-2 whitespace-nowrap transition-colors hover:text-[#b87586]"
-            >
-              <Mail
-                className="h-3.5 w-3.5 text-[#b87586]"
-                strokeWidth={2}
-              />
-
-              <span>info@salonsassured.co.ke</span>
-            </a>
-          </div>
-
-          <div className="flex items-center gap-5">
-            <span className="hidden items-center gap-2 whitespace-nowrap lg:inline-flex">
-              Kenya&apos;s Beauty Business Growth Partner
-            </span>
-
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
-              <MapPin
-                className="h-3.5 w-3.5 text-[#b87586]"
-                strokeWidth={2}
-              />
-
-              Kwaheri Road, Runda
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN NAVIGATION */}
-      <nav className="mx-auto grid h-[82px] w-full max-w-[1320px] grid-cols-[auto_1fr_auto] items-center gap-5 px-5 lg:px-7">
-        {/* LOGO */}
-        <Link
-          href="/"
-          aria-label="Salons Assured Kenya Ltd home"
-          className="group flex min-w-fit items-center gap-3"
+    <>
+      <header
+        ref={headerRef}
+        className="fixed left-0 top-0 z-[100] w-full px-3 pt-3 sm:px-4"
+      >
+        <nav
+          className={[
+            "mx-auto flex h-[70px] w-full max-w-[1360px]",
+            "items-center rounded-[18px] border px-5",
+            "bg-white/95 backdrop-blur-xl",
+            "transition-all duration-300 sm:px-7",
+            hasScrolled
+              ? "border-[#ead5db] shadow-[0_16px_48px_rgba(7,27,51,0.14)]"
+              : "border-white/70 shadow-[0_12px_36px_rgba(7,27,51,0.10)]",
+          ].join(" ")}
         >
-          <div className="relative h-[58px] w-[58px] shrink-0 transition-transform duration-300 group-hover:scale-[1.03]">
-            <Image
-              src="/salons-assured.png"
-              alt="Salons Assured Kenya Ltd"
-              fill
-              priority
-              sizes="58px"
-              className="object-contain"
-            />
-          </div>
-
-          <div className="hidden min-w-fit sm:block">
-            <p className="font-serif text-[21px] font-black leading-none tracking-[-0.045em] text-[#071b33] lg:text-[23px]">
-              Salons Assured
-            </p>
-
-            <p className="mt-1.5 text-[8px] font-extrabold uppercase tracking-[0.31em] text-[#b87586] lg:text-[9px]">
-              Kenya Limited
-            </p>
-          </div>
-        </Link>
-
-        {/* DESKTOP NAVIGATION */}
-        <div className="hidden h-full items-center justify-center gap-2 xl:flex">
+          {/* BRAND */}
           <Link
             href="/"
-            className={navigationLinkClass("/")}
+            aria-label="Salons Assured Kenya Limited home"
+            className="group flex min-w-[230px] shrink-0 items-center gap-3.5"
           >
-            Home
-            <span
-              className={navigationUnderlineClass(
-                isActive("/"),
-              )}
-            />
-          </Link>
-
-          <Link
-            href="/about"
-            className={navigationLinkClass("/about")}
-          >
-            About
-            <span
-              className={navigationUnderlineClass(
-                isActive("/about"),
-              )}
-            />
-          </Link>
-
-          {/* SERVICES DROPDOWN */}
-          <div
-            className="relative flex h-full items-center"
-            onMouseEnter={() => openDropdown("services")}
-            onMouseLeave={closeDropdownSlowly}
-            onFocus={() => openDropdown("services")}
-          >
-            <button
-              type="button"
-              aria-expanded={activeDropdown === "services"}
-              aria-haspopup="true"
-              onClick={() => toggleDropdown("services")}
-              className={dropdownButtonClass(
-                isServicesActive,
-              )}
-            >
-              Services
-
-              <ChevronDown
-                className={[
-                  "h-3.5 w-3.5 transition-transform duration-300",
-                  activeDropdown === "services"
-                    ? "rotate-180"
-                    : "",
-                ].join(" ")}
-                strokeWidth={2.3}
+            <div className="relative h-[44px] w-[44px] shrink-0">
+              <Image
+                src="/salons-assured.png"
+                alt="Salons Assured logo"
+                fill
+                priority
+                sizes="44px"
+                className="object-contain transition-transform duration-300 group-hover:scale-[1.04]"
               />
-
-              <span
-                className={navigationUnderlineClass(
-                  isServicesActive,
-                )}
-              />
-            </button>
-
-            <div
-              className={[
-                "absolute left-1/2 top-full z-50 w-[790px]",
-                "-translate-x-1/2 pt-4",
-                "transition-all duration-200",
-                activeDropdown === "services"
-                  ? "visible translate-y-0 opacity-100"
-                  : "invisible translate-y-2 opacity-0",
-              ].join(" ")}
-              onMouseEnter={() => openDropdown("services")}
-              onMouseLeave={closeDropdownSlowly}
-            >
-              <div className="overflow-hidden rounded-[26px] border border-[#ead5db] bg-white shadow-[0_28px_90px_rgba(7,27,51,0.17)]">
-                <div className="grid grid-cols-[0.78fr_1.22fr]">
-                  <div className="relative overflow-hidden bg-[#071b33] p-7 text-white">
-                    <div className="absolute -right-14 -top-14 h-44 w-44 rounded-full border border-white/10" />
-                    <div className="absolute -bottom-20 -left-16 h-52 w-52 rounded-full bg-[#b87586]/15 blur-2xl" />
-
-                    <div className="relative">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-[#e3b4bf]">
-                        <Sparkles
-                          className="h-5 w-5"
-                          strokeWidth={1.8}
-                        />
-                      </div>
-
-                      <p className="mt-6 text-[10px] font-extrabold uppercase tracking-[0.25em] text-[#e3b4bf]">
-                        Our Expertise
-                      </p>
-
-                      <h3 className="mt-3 max-w-[260px] font-serif text-[31px] font-black leading-[1.08] tracking-[-0.04em]">
-                        Building stronger beauty businesses.
-                      </h3>
-
-                      <p className="mt-4 max-w-[275px] text-[13px] leading-6 text-white/70">
-                        Strategic, operational and people-focused
-                        support for salons, spas, barbershops and
-                        beauty brands.
-                      </p>
-
-                      <Link
-                        href="/services"
-                        className="mt-6 inline-flex items-center gap-2 border-b border-[#e3b4bf] pb-1 text-[12px] font-extrabold text-white transition-colors hover:text-[#e3b4bf]"
-                      >
-                        Explore all services
-
-                        <ArrowUpRight
-                          className="h-4 w-4"
-                          strokeWidth={2}
-                        />
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1 p-4">
-                    {serviceLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className="group rounded-[18px] p-4 transition-colors duration-300 hover:bg-[#fbf4f6]"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-serif text-[18px] font-black leading-[1.2] tracking-[-0.025em] text-[#071b33] transition-colors group-hover:text-[#b87586]">
-                              {link.label}
-                            </p>
-
-                            <p className="mt-2 text-[12px] leading-5 text-slate-600">
-                              {link.description}
-                            </p>
-                          </div>
-
-                          <ArrowUpRight
-                            className="mt-0.5 h-4 w-4 shrink-0 text-[#b87586] opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
-                            strokeWidth={2}
-                          />
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Link
-            href="/business-owners"
-            className={navigationLinkClass(
-              "/business-owners",
-            )}
-          >
-            Business Owners
-            <span
-              className={navigationUnderlineClass(
-                isActive("/business-owners"),
-              )}
-            />
-          </Link>
-
-          {/* BLOG IS NOW A MAIN LINK */}
-          <Link
-            href="/blog"
-            className={navigationLinkClass("/blog")}
-          >
-            Blog
-            <span
-              className={navigationUnderlineClass(
-                isActive("/blog"),
-              )}
-            />
-          </Link>
-
-          {/* RESOURCES DROPDOWN */}
-          <div
-            className="relative flex h-full items-center"
-            onMouseEnter={() => openDropdown("resources")}
-            onMouseLeave={closeDropdownSlowly}
-            onFocus={() => openDropdown("resources")}
-          >
-            <button
-              type="button"
-              aria-expanded={activeDropdown === "resources"}
-              aria-haspopup="true"
-              onClick={() => toggleDropdown("resources")}
-              className={dropdownButtonClass(
-                isResourcesActive,
-              )}
-            >
-              Resources
-
-              <ChevronDown
-                className={[
-                  "h-3.5 w-3.5 transition-transform duration-300",
-                  activeDropdown === "resources"
-                    ? "rotate-180"
-                    : "",
-                ].join(" ")}
-                strokeWidth={2.3}
-              />
-
-              <span
-                className={navigationUnderlineClass(
-                  isResourcesActive,
-                )}
-              />
-            </button>
-
-            <div
-              className={[
-                "absolute right-0 top-full z-50 w-[355px] pt-4",
-                "transition-all duration-200",
-                activeDropdown === "resources"
-                  ? "visible translate-y-0 opacity-100"
-                  : "invisible translate-y-2 opacity-0",
-              ].join(" ")}
-              onMouseEnter={() => openDropdown("resources")}
-              onMouseLeave={closeDropdownSlowly}
-            >
-              <div className="rounded-[22px] border border-[#ead5db] bg-white p-3 shadow-[0_28px_80px_rgba(7,27,51,0.16)]">
-                <div className="border-b border-[#ead5db] px-4 pb-3 pt-2">
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#b87586]">
-                    Explore Salons Assured
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  {resourceLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="group flex items-start justify-between gap-4 rounded-[15px] px-4 py-3.5 transition-colors hover:bg-[#fbf4f6]"
-                    >
-                      <div>
-                        <p className="text-[13px] font-extrabold text-[#071b33] transition-colors group-hover:text-[#b87586]">
-                          {link.label}
-                        </p>
-
-                        <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                          {link.description}
-                        </p>
-                      </div>
-
-                      <ArrowUpRight
-                        className="mt-1 h-4 w-4 shrink-0 text-[#b87586] transition-transform duration-300 group-hover:translate-x-0.5"
-                        strokeWidth={2}
-                      />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Link
-            href="/contact"
-            className={navigationLinkClass("/contact")}
-          >
-            Contact
-            <span
-              className={navigationUnderlineClass(
-                isActive("/contact"),
-              )}
-            />
-          </Link>
-        </div>
-
-        {/* DESKTOP ACTIONS */}
-        <div className="hidden min-w-fit items-center justify-end gap-2.5 xl:flex">
-          <Link
-            href="/job-seekers"
-            className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#ead5db] bg-white px-4 text-[12px] font-extrabold text-[#071b33] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#d9a3af] hover:bg-[#fbf4f6] hover:text-[#b87586]"
-          >
-            <UsersRound
-              className="h-4 w-4"
-              strokeWidth={2}
-            />
-
-            Find Jobs
-          </Link>
-
-          <Link
-            href="/request-staff"
-            className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#071b33] px-5 text-[12px] font-extrabold text-white shadow-[0_12px_28px_rgba(7,27,51,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#b87586] hover:shadow-[0_16px_35px_rgba(184,117,134,0.28)]"
-          >
-            <BriefcaseBusiness
-              className="h-4 w-4"
-              strokeWidth={2}
-            />
-
-            Request Staff
-          </Link>
-        </div>
-
-        {/* MOBILE MENU BUTTON */}
-        <button
-          type="button"
-          aria-label={
-            isOpen ? "Close navigation menu" : "Open navigation menu"
-          }
-          aria-expanded={isOpen}
-          aria-controls="mobile-navigation"
-          onClick={() => {
-            setIsOpen((current) => !current);
-            setActiveDropdown(null);
-          }}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-[#ead5db] bg-white text-[#071b33] shadow-sm transition-colors hover:bg-[#fbf4f6] hover:text-[#b87586] xl:hidden"
-        >
-          {isOpen ? (
-            <X
-              className="h-5 w-5"
-              strokeWidth={2}
-            />
-          ) : (
-            <Menu
-              className="h-5 w-5"
-              strokeWidth={2}
-            />
-          )}
-        </button>
-      </nav>
-
-      {/* MOBILE NAVIGATION */}
-      <div
-        id="mobile-navigation"
-        className={[
-          "absolute left-0 top-full w-full xl:hidden",
-          "border-t border-[#ead5db] bg-white",
-          "shadow-[0_24px_60px_rgba(7,27,51,0.15)]",
-          "transition-all duration-300",
-          isOpen
-            ? "visible translate-y-0 opacity-100"
-            : "invisible -translate-y-2 opacity-0",
-        ].join(" ")}
-      >
-        <div className="max-h-[calc(100vh-82px)] overflow-y-auto px-5 py-6">
-          <div className="mx-auto max-w-[760px]">
-            {/* MAIN MOBILE LINKS */}
-            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 sm:gap-2">
-              {mobileMainLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={[
-                    "flex items-center justify-between rounded-[14px]",
-                    "px-4 py-3.5 text-[14px] font-extrabold",
-                    "transition-colors",
-                    isActive(link.href)
-                      ? "bg-[#fbf4f6] text-[#b87586]"
-                      : "text-[#071b33] hover:bg-[#fbf4f6] hover:text-[#b87586]",
-                  ].join(" ")}
-                >
-                  {link.label}
-
-                  <ArrowUpRight
-                    className="h-4 w-4"
-                    strokeWidth={1.9}
-                  />
-                </Link>
-              ))}
             </div>
 
-            {/* MOBILE SERVICES */}
-            <div className="mt-5 rounded-[22px] border border-[#ead5db] bg-[#fbf4f6] p-3">
-              <div className="flex items-center justify-between px-2 pb-2 pt-1">
-                <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#b87586]">
-                    Our Services
-                  </p>
-
-                  <p className="mt-1 text-[12px] text-slate-500">
-                    Support for beauty businesses and professionals
-                  </p>
-                </div>
-
-                <Sparkles
-                  className="h-5 w-5 text-[#b87586]"
-                  strokeWidth={1.8}
-                />
-              </div>
-
-              <div className="mt-2 grid gap-1 sm:grid-cols-2">
-                {serviceLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="rounded-[14px] bg-white/70 px-3.5 py-3 text-[12px] font-bold leading-5 text-[#071b33]/80 transition-colors hover:bg-white hover:text-[#b87586]"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* MOBILE RESOURCES */}
-            <div className="mt-4 rounded-[22px] border border-[#ead5db] bg-white p-3">
-              <p className="px-2 pb-2 pt-1 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#b87586]">
-                More Resources
+            <div className="min-w-fit">
+              <p className="font-serif text-[20px] font-black leading-none tracking-[-0.045em] text-[#071b33] sm:text-[21px]">
+                Salons Assured
               </p>
 
-              <div className="grid gap-1 sm:grid-cols-3">
-                {resourceLinks.map((link) => (
+              <p className="mt-1.5 text-[8px] font-extrabold uppercase tracking-[0.29em] text-[#b87586]">
+                Kenya Limited
+              </p>
+            </div>
+          </Link>
+
+          {/* DESKTOP MENU */}
+          <div className="hidden h-full flex-1 items-center justify-center gap-9 xl:flex 2xl:gap-11">
+            <Link
+              href="/about"
+              className={desktopLinkClass(
+                "/about",
+              )}
+              aria-current={
+                isActive("/about")
+                  ? "page"
+                  : undefined
+              }
+            >
+              About
+
+              <span
+                className={[
+                  "absolute bottom-[12px] left-1/2 h-1.5 w-1.5",
+                  "-translate-x-1/2 rounded-full bg-[#b87586]",
+                  "transition-all duration-300",
+                  isActive("/about")
+                    ? "scale-100 opacity-100"
+                    : "scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100",
+                ].join(" ")}
+              />
+            </Link>
+
+            <DesktopDropdown
+              name="services"
+              label="Services"
+              eyebrow="Our Expertise"
+              links={serviceLinks}
+              active={servicesActive}
+              activeDropdown={
+                activeDropdown
+              }
+              width="w-[380px]"
+              onOpen={openDropdown}
+              onClose={
+                closeDropdownSlowly
+              }
+              onToggle={toggleDropdown}
+              isActive={isActive}
+            />
+
+            <DesktopDropdown
+              name="audiences"
+              label="Who We Help"
+              eyebrow="Choose Your Pathway"
+              links={audienceLinks}
+              active={groupActive(
+                audienceLinks,
+              )}
+              activeDropdown={
+                activeDropdown
+              }
+              width="w-[340px]"
+              onOpen={openDropdown}
+              onClose={
+                closeDropdownSlowly
+              }
+              onToggle={toggleDropdown}
+              isActive={isActive}
+            />
+
+            <DesktopDropdown
+              name="insights"
+              label="Insights"
+              eyebrow="Learn and Explore"
+              links={insightLinks}
+              active={groupActive(
+                insightLinks,
+              )}
+              activeDropdown={
+                activeDropdown
+              }
+              width="w-[300px]"
+              onOpen={openDropdown}
+              onClose={
+                closeDropdownSlowly
+              }
+              onToggle={toggleDropdown}
+              isActive={isActive}
+            />
+
+            <Link
+              href="/contact"
+              className={desktopLinkClass(
+                "/contact",
+              )}
+              aria-current={
+                isActive("/contact")
+                  ? "page"
+                  : undefined
+              }
+            >
+              Contact
+
+              <span
+                className={[
+                  "absolute bottom-[12px] left-1/2 h-1.5 w-1.5",
+                  "-translate-x-1/2 rounded-full bg-[#b87586]",
+                  "transition-all duration-300",
+                  isActive("/contact")
+                    ? "scale-100 opacity-100"
+                    : "scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100",
+                ].join(" ")}
+              />
+            </Link>
+          </div>
+
+          {/* DESKTOP CTA */}
+          <div className="ml-auto hidden w-[190px] shrink-0 justify-end xl:flex">
+            <Link
+              href="/contact"
+              className="group inline-flex h-10 items-center justify-center gap-2.5 rounded-full bg-[#071b33] px-5 text-[11px] font-extrabold text-white shadow-[0_10px_24px_rgba(7,27,51,0.16)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#b87586] hover:shadow-[0_14px_32px_rgba(184,117,134,0.26)]"
+            >
+              Book Consultation
+
+              <ArrowUpRight
+                className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                strokeWidth={2}
+              />
+            </Link>
+          </div>
+
+          {/* MOBILE MENU BUTTON */}
+          <button
+            type="button"
+            aria-label={
+              isOpen
+                ? "Close navigation menu"
+                : "Open navigation menu"
+            }
+            aria-expanded={isOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => {
+              setIsOpen(
+                (current) => !current,
+              );
+
+              setActiveDropdown(null);
+            }}
+            className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#071b33] text-white transition-colors hover:bg-[#b87586] xl:hidden"
+          >
+            {isOpen ? (
+              <X
+                className="h-5 w-5"
+                strokeWidth={2}
+              />
+            ) : (
+              <Menu
+                className="h-5 w-5"
+                strokeWidth={2}
+              />
+            )}
+          </button>
+        </nav>
+
+        {/* MOBILE NAVIGATION */}
+        <div
+          id="mobile-navigation"
+          className={[
+            "mx-auto mt-2 w-full max-w-[1360px]",
+            "overflow-hidden rounded-[18px]",
+            "border border-white/10 bg-[#071b33]",
+            "shadow-[0_30px_80px_rgba(7,27,51,0.32)]",
+            "transition-all duration-300 xl:hidden",
+            isOpen
+              ? "visible translate-y-0 opacity-100"
+              : "invisible -translate-y-3 opacity-0",
+          ].join(" ")}
+        >
+          <div className="max-h-[calc(100vh-104px)] overflow-y-auto px-6 py-7 sm:px-8">
+            <div className="flex items-center gap-3.5 border-b border-white/15 pb-5">
+              <div className="relative h-[42px] w-[42px] shrink-0">
+                <Image
+                  src="/salons-assured.png"
+                  alt="Salons Assured logo"
+                  fill
+                  sizes="42px"
+                  className="object-contain"
+                />
+              </div>
+
+              <div>
+                <p className="font-serif text-[19px] font-black leading-none tracking-[-0.04em] text-white">
+                  Salons Assured
+                </p>
+
+                <p className="mt-1.5 text-[7px] font-extrabold uppercase tracking-[0.3em] text-[#d9a3af]">
+                  Kenya Limited
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-7 text-[9px] font-extrabold uppercase tracking-[0.28em] text-[#d9a3af]">
+              Explore Salons Assured
+            </p>
+
+            <div className="mt-5 border-t border-white/15">
+              {mobileLinks.map(
+                (link, index) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="rounded-[14px] px-3.5 py-3 text-[12px] font-bold text-[#071b33]/80 transition-colors hover:bg-[#fbf4f6] hover:text-[#b87586]"
+                    className="group flex items-center justify-between border-b border-white/15 py-4"
                   >
-                    {link.label}
+                    <div className="flex items-center gap-5">
+                      <span className="font-serif text-[14px] font-black text-[#d9a3af]">
+                        {String(
+                          index + 1,
+                        ).padStart(
+                          2,
+                          "0",
+                        )}
+                      </span>
+
+                      <span
+                        className={[
+                          "font-serif text-[25px] font-black tracking-[-0.04em]",
+                          isActive(link.href)
+                            ? "text-[#d9a3af]"
+                            : "text-white",
+                        ].join(" ")}
+                      >
+                        {link.label}
+                      </span>
+                    </div>
+
+                    <ArrowRight className="h-4 w-4 text-[#d9a3af] transition-transform duration-300 group-hover:translate-x-1" />
                   </Link>
-                ))}
-              </div>
+                ),
+              )}
             </div>
 
-            {/* MOBILE ACTIONS */}
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <Link
-                href="/job-seekers"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#ead5db] bg-white px-5 text-[13px] font-extrabold text-[#071b33] transition-colors hover:bg-[#fbf4f6] hover:text-[#b87586]"
-              >
-                <UsersRound
-                  className="h-4 w-4"
-                  strokeWidth={2}
-                />
+            <Link
+              href="/contact"
+              className="group mt-7 flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#d9a3af] px-6 text-[13px] font-extrabold text-[#071b33] transition-colors duration-300 hover:bg-white"
+            >
+              Book Consultation
 
-                Apply for Jobs
-              </Link>
-
-              <Link
-                href="/request-staff"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#071b33] px-5 text-[13px] font-extrabold text-white transition-colors hover:bg-[#b87586]"
-              >
-                <BriefcaseBusiness
-                  className="h-4 w-4"
-                  strokeWidth={2}
-                />
-
-                Request Staff
-              </Link>
-            </div>
-
-            {/* MOBILE CONTACT INFORMATION */}
-            <div className="mt-5 grid gap-3 rounded-[22px] bg-[#071b33] p-5 text-[12px] text-white/75 sm:grid-cols-3">
-              <a
-                href="tel:+254715500268"
-                className="flex items-center gap-3 transition-colors hover:text-white"
-              >
-                <Phone
-                  className="h-4 w-4 shrink-0 text-[#e3b4bf]"
-                  strokeWidth={2}
-                />
-
-                <span>0715 500 268</span>
-              </a>
-
-              <a
-                href="mailto:info@salonsassured.com"
-                className="flex items-center gap-3 transition-colors hover:text-white"
-              >
-                <Mail
-                  className="h-4 w-4 shrink-0 text-[#e3b4bf]"
-                  strokeWidth={2}
-                />
-
-                <span>info@salonsassured.com</span>
-              </a>
-
-              <div className="flex items-center gap-3">
-                <MapPin
-                  className="h-4 w-4 shrink-0 text-[#e3b4bf]"
-                  strokeWidth={2}
-                />
-
-                <span>Kwaheri Road, Runda</span>
-              </div>
-            </div>
+              <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </Link>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {!isOverlayRoute && (
+        <div
+          className="h-[94px]"
+          aria-hidden="true"
+        />
+      )}
+    </>
   );
 }
