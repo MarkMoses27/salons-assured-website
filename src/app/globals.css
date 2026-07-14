@@ -98,3 +98,15 @@ body {
     animation: none;
   }
 }
+
+#site-footer {
+  background-color: #06172c !important;
+  color: #ffffff !important;
+  position: relative;
+  isolation: isolate;
+}
+
+#site-footer > div {
+  position: relative;
+  z-index: 1;
+}

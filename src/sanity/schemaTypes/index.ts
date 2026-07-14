@@ -1,4 +1,4 @@
-import {articleContent} from "./articleContent";
+import { articleContent } from "./articleContent";
 
 import {
   actionSection,
@@ -9,15 +9,17 @@ import {
   statisticsSection,
 } from "./articleBlocks";
 
-import {author} from "./author";
-import {category} from "./category";
-import {post} from "./post";
-import {siteSettings} from "./siteSettings";
+import { author } from "./author";
+import { caseStudy } from "./caseStudy";
+import { category } from "./category";
+import { post } from "./post";
+import { siteSettings } from "./siteSettings";
 
 export const schemaTypes = [
   siteSettings,
   author,
   category,
+  caseStudy,
 
   highlightCallout,
   statisticsSection,
