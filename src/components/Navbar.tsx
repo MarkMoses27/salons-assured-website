@@ -106,41 +106,46 @@ const insightLinks: DropdownLink[] = [
 const mobileLinks = [
   {
     number: "01",
+    label: "Home",
+    href: "/",
+  },
+  {
+    number: "02",
     label: "About",
     href: "/about",
   },
   {
-    number: "02",
+    number: "03",
     label: "Services",
     href: "/services",
   },
   {
-    number: "03",
+    number: "04",
     label: "Business Owners",
     href: "/business-owners",
   },
   {
-    number: "04",
+    number: "05",
     label: "Investors",
     href: "/investors",
   },
   {
-    number: "05",
+    number: "06",
     label: "Job Seekers",
     href: "/job-seekers",
   },
   {
-    number: "06",
+    number: "07",
     label: "Blog & Insights",
     href: "/blog",
   },
   {
-    number: "07",
+    number: "08",
     label: "Events",
     href: "/events",
   },
   {
-    number: "08",
+    number: "09",
     label: "Contact",
     href: "/contact",
   },
@@ -675,7 +680,7 @@ export default function Navbar() {
   const navigationItemClass =
     [
       "group relative flex h-full",
-      "items-center px-[17px]",
+      "items-center px-[14px]",
       "font-semibold",
       "tracking-[-0.012em]",
       "transition-colors duration-300",
@@ -831,6 +836,41 @@ export default function Navbar() {
           {/* DESKTOP NAVIGATION */}
           <LayoutGroup id="sak-navigation">
             <div className="absolute left-1/2 hidden h-full -translate-x-1/2 items-center gap-1 xl:flex">
+              {/* HOME */}
+              <Link
+                href="/"
+                onMouseEnter={() =>
+                  handleDirectHover(
+                    "home",
+                  )
+                }
+                onMouseLeave={() =>
+                  setHoveredTopItem(
+                    null,
+                  )
+                }
+                className={[
+                  navigationItemClass,
+                  routeIsActive("/")
+                    ? textColour
+                    : mutedTextColour,
+                ].join(" ")}
+              >
+                {showHighlight(
+                  "home",
+                  routeIsActive("/"),
+                ) && (
+                  <NavigationHighlight
+                    dark={darkAtTop}
+                  />
+                )}
+
+                <span className="relative z-10">
+                  <RollingLabel label="Home" />
+                </span>
+              </Link>
+
+              {/* ABOUT */}
               <Link
                 href="/about"
                 onMouseEnter={() =>
@@ -1107,6 +1147,7 @@ export default function Navbar() {
                 />
               </div>
 
+              {/* CONTACT */}
               <Link
                 href="/contact"
                 onMouseEnter={() =>
@@ -1338,7 +1379,16 @@ export default function Navbar() {
                     >
                       <Link
                         href={link.href}
-                        className="group grid grid-cols-[42px_1fr_auto] items-center gap-3 border-b border-white/15 py-4 last:border-b-0"
+                        className={[
+                          "group grid grid-cols-[42px_1fr_auto]",
+                          "items-center gap-3 border-b border-white/15",
+                          "py-4 last:border-b-0",
+                          routeIsActive(
+                            link.href,
+                          )
+                            ? "text-[#d9a3af]"
+                            : "text-white",
+                        ].join(" ")}
                       >
                         <span className="[font-family:var(--font-display)] text-[14px] italic text-[#d9a3af]">
                           {link.number}
