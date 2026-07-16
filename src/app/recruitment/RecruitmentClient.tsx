@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 
 import type {
   ComponentType,
@@ -21,11 +20,9 @@ import {
 } from "motion/react";
 
 import {
-  ArrowDown,
   ArrowRight,
   ArrowUpRight,
   BadgeCheck,
-  BriefcaseBusiness,
   CheckCircle2,
   ClipboardCheck,
   FileCheck2,
@@ -170,7 +167,7 @@ const roles = [
   "Beauty Therapist",
   "Massage Therapist",
   "Receptionist",
-  "Customer-Care Officer",
+  "Customer Care Officer",
   "Housekeeping Staff",
   "Makeup Artist",
   "Social Media Manager",
@@ -241,7 +238,7 @@ const faqs = [
       "How do I request staff for my salon, spa or barbershop?",
 
     answer:
-      "Choose Request Staff in the recruitment form. Provide the role, business location, number of staff required, preferred experience and the date the person is needed. The Salons Assured team will review the request and follow up.",
+      "Choose Request Staff in the recruitment form. Provide the role, business location, number of staff required, preferred experience and the date the person is needed. The Salons Assured team will review your request and follow up.",
   },
   {
     question:
@@ -421,7 +418,10 @@ export default function RecruitmentClient() {
   const shouldReduceMotion =
     useReducedMotion();
 
-  const [requestType, setRequestType] =
+  const [
+    requestType,
+    setRequestType,
+  ] =
     useState<RecruitmentRequest>(
       "Request Staff",
     );
@@ -440,6 +440,24 @@ export default function RecruitmentClient() {
       },
     );
 
+  function scrollToSection(
+    sectionId: string,
+  ) {
+    document
+      .getElementById(
+        sectionId,
+      )
+      ?.scrollIntoView({
+        behavior:
+          shouldReduceMotion
+            ? "auto"
+            : "smooth",
+
+        block:
+          "start",
+      });
+  }
+
   function openRecruitmentDesk(
     type: RecruitmentRequest,
   ) {
@@ -449,25 +467,16 @@ export default function RecruitmentClient() {
 
     window.requestAnimationFrame(
       () => {
-        document
-          .getElementById(
-            "recruitment-desk",
-          )
-          ?.scrollIntoView({
-            behavior:
-              shouldReduceMotion
-                ? "auto"
-                : "smooth",
-
-            block:
-              "start",
-          });
+        scrollToSection(
+          "recruitment-desk",
+        );
       },
     );
   }
 
   function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
+    event:
+      FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
@@ -480,8 +489,7 @@ export default function RecruitmentClient() {
       );
 
     const value = (
-      field:
-        string,
+      field: string,
     ) =>
       String(
         data.get(
@@ -524,11 +532,17 @@ export default function RecruitmentClient() {
         message,
       )}`;
 
-    window.open(
-      whatsappUrl,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    const whatsappWindow =
+      window.open(
+        whatsappUrl,
+        "_blank",
+        "noopener,noreferrer",
+      );
+
+    if (!whatsappWindow) {
+      window.location.href =
+        whatsappUrl;
+    }
   }
 
   return (
@@ -555,16 +569,21 @@ export default function RecruitmentClient() {
 
         <div className="relative mx-auto grid min-h-[820px] max-w-[1380px] gap-14 px-5 pb-20 pt-36 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-32">
           <motion.div
-            initial={{
-              opacity: 0,
-              y:
-                shouldReduceMotion
-                  ? 0
-                  : 34,
-            }}
+            initial={
+              shouldReduceMotion
+                ? false
+                : {
+                    opacity: 1,
+                    y: 34,
+                    filter:
+                      "blur(4px)",
+                  }
+            }
             animate={{
               opacity: 1,
               y: 0,
+              filter:
+                "blur(0px)",
             }}
             transition={{
               duration:
@@ -593,39 +612,19 @@ export default function RecruitmentClient() {
               reliable and professional talent.
             </p>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() =>
-                  openRecruitmentDesk(
-                    "Request Staff",
-                  )
-                }
-                className="group inline-flex h-14 items-center justify-center gap-4 rounded-full bg-[#d9a3af] px-7 text-[10px] font-extrabold uppercase tracking-[0.17em] text-[#071b33] transition duration-300 hover:-translate-y-1 hover:bg-white"
-              >
-                <BriefcaseBusiness className="h-4 w-4" />
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection(
+                  "recruitment-paths",
+                )
+              }
+              className="group mt-9 inline-flex h-14 items-center justify-center gap-4 rounded-full bg-[#d9a3af] px-8 text-[10px] font-extrabold uppercase tracking-[0.17em] text-[#071b33] transition duration-300 hover:-translate-y-1 hover:bg-white"
+            >
+              Start Recruitment
 
-                Request Staff
-
-                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  openRecruitmentDesk(
-                    "Apply for Jobs",
-                  )
-                }
-                className="group inline-flex h-14 items-center justify-center gap-4 rounded-full border border-white/20 bg-white/[0.04] px-7 text-[10px] font-extrabold uppercase tracking-[0.17em] text-white transition duration-300 hover:-translate-y-1 hover:border-[#d9a3af] hover:bg-white/[0.08]"
-              >
-                <UsersRound className="h-4 w-4 text-[#d9a3af]" />
-
-                Apply for Jobs
-
-                <ArrowUpRight className="h-4 w-4 text-[#d9a3af] transition-transform duration-300 group-hover:rotate-45" />
-              </button>
-            </div>
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </button>
 
             <div className="mt-10 grid max-w-[690px] gap-4 border-t border-white/15 pt-7 sm:grid-cols-3">
               {[
@@ -674,16 +673,21 @@ export default function RecruitmentClient() {
           </motion.div>
 
           <motion.div
-            initial={{
-              opacity: 0,
-              x:
-                shouldReduceMotion
-                  ? 0
-                  : 45,
-            }}
+            initial={
+              shouldReduceMotion
+                ? false
+                : {
+                    opacity: 1,
+                    x: 45,
+                    filter:
+                      "blur(4px)",
+                  }
+            }
             animate={{
               opacity: 1,
               x: 0,
+              filter:
+                "blur(0px)",
             }}
             transition={{
               duration:
@@ -738,33 +742,9 @@ export default function RecruitmentClient() {
             </div>
           </motion.div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            document
-              .getElementById(
-                "recruitment-paths",
-              )
-              ?.scrollIntoView({
-                behavior:
-                  shouldReduceMotion
-                    ? "auto"
-                    : "smooth",
-              });
-          }}
-          className="absolute bottom-8 left-1/2 z-20 hidden -translate-x-1/2 flex-col items-center gap-2 text-white/45 transition-colors hover:text-[#d9a3af] lg:flex"
-          aria-label="Continue to recruitment options"
-        >
-          <span className="text-[8px] font-extrabold uppercase tracking-[0.28em]">
-            Explore
-          </span>
-
-          <ArrowDown className="h-4 w-4 animate-bounce" />
-        </button>
       </section>
 
-      {/* TWO RECRUITMENT PATHS */}
+      {/* RECRUITMENT PATHWAYS */}
       <section
         id="recruitment-paths"
         className="relative scroll-mt-24 overflow-hidden bg-[#f8f5f3] py-20 sm:py-24 lg:py-28"
@@ -876,7 +856,7 @@ export default function RecruitmentClient() {
                 }
                 className="group mt-8 inline-flex h-14 items-center justify-center gap-4 rounded-full bg-[#071b33] px-8 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white transition duration-300 hover:-translate-y-1 hover:bg-[#b87586]"
               >
-                Submit a Staff Request
+                Request Staff
 
                 <ArrowRight className="h-4 w-4 text-[#d9a3af] transition-transform duration-300 group-hover:translate-x-1 group-hover:text-white" />
               </button>
@@ -936,7 +916,7 @@ export default function RecruitmentClient() {
                 }
                 className="group mt-8 inline-flex h-14 items-center justify-center gap-4 rounded-full bg-[#b87586] px-8 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white transition duration-300 hover:-translate-y-1 hover:bg-[#071b33]"
               >
-                Submit Your Profile
+                Apply for Opportunities
 
                 <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:rotate-45" />
               </button>
@@ -1641,71 +1621,6 @@ export default function RecruitmentClient() {
             )}
           </div>
         </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section className="relative overflow-hidden bg-[#071b33] py-24 text-white sm:py-28">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_18%,rgba(217,163,175,0.22),transparent_30%),radial-gradient(circle_at_90%_82%,rgba(184,117,134,0.14),transparent_32%)]" />
-
-        <Reveal
-          direction="scale"
-          className="relative mx-auto max-w-[1120px] px-5 text-center sm:px-8"
-        >
-          <p className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-[#d9a3af]">
-            Build the Right Connection
-          </p>
-
-          <h2 className="mt-7 [font-family:var(--font-display)] text-[51px] font-semibold leading-[0.89] tracking-[-0.063em] sm:text-[76px] lg:text-[91px]">
-            Better businesses and better careers start with
-            <span className="ml-3 font-medium italic text-[#d9a3af]">
-              better recruitment.
-            </span>
-          </h2>
-
-          <p className="mx-auto mt-8 max-w-[700px] text-[15px] leading-8 text-white/62">
-            Submit a staffing request or professional profile and
-            begin the recruitment conversation with Salons Assured.
-          </p>
-
-          <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() =>
-                openRecruitmentDesk(
-                  "Request Staff",
-                )
-              }
-              className="group inline-flex h-14 items-center justify-center gap-4 rounded-full bg-[#d9a3af] px-8 text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33] transition duration-300 hover:-translate-y-1 hover:bg-white"
-            >
-              Request Staff
-
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                openRecruitmentDesk(
-                  "Apply for Jobs",
-                )
-              }
-              className="group inline-flex h-14 items-center justify-center gap-4 rounded-full border border-white/20 px-8 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white transition duration-300 hover:-translate-y-1 hover:border-[#d9a3af] hover:bg-white/[0.06]"
-            >
-              Apply for Opportunities
-
-              <ArrowUpRight className="h-4 w-4 text-[#d9a3af] transition-transform duration-300 group-hover:rotate-45" />
-            </button>
-          </div>
-
-          <Link
-            href="/contact"
-            className="mt-8 inline-flex items-center gap-3 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white/60 transition-colors hover:text-white"
-          >
-            Speak directly with our team
-
-            <ArrowUpRight className="h-4 w-4 text-[#d9a3af]" />
-          </Link>
-        </Reveal>
       </section>
     </main>
   );

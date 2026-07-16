@@ -459,11 +459,11 @@ export default function InsightsEventsClient({
           >
             <div className="absolute inset-x-0 top-0 h-[46%] overflow-hidden">
               <Image
-                src="/hero-slide-2.png"
-                alt="Salons Assured beauty business event and professional learning experience"
+                src="/sak-event-featured.webp"
+                alt="Salons Assured beauty business training event with participants and facilitator"
                 fill
                 sizes="(max-width: 1024px) 100vw, 38vw"
-                className="object-cover transition-transform duration-[1400ms] group-hover:scale-[1.04]"
+                className="object-cover object-center transition-transform duration-[1400ms] group-hover:scale-[1.04]"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-[#071b33] via-[#071b33]/15 to-transparent" />
