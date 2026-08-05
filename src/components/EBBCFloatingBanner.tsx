@@ -117,7 +117,11 @@ export default function EBBCFloatingBanner() {
   }, []);
 
   const closeBanner = () => {
-    sessionStorage.setItem(storageKey, "true");
+    sessionStorage.setItem(
+      storageKey,
+      "true",
+    );
+
     setIsVisible(false);
   };
 
@@ -153,6 +157,11 @@ export default function EBBCFloatingBanner() {
       : eventStatus === "live"
         ? "View Event Details"
         : "View Event Highlights";
+
+  const buttonHref =
+    eventStatus === "upcoming"
+      ? "/ebbc2026/tickets"
+      : "/ebbc2026";
 
   return (
     <aside className="fixed inset-x-0 bottom-0 z-[100] px-3 pb-3 sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[340px] sm:px-0 sm:pb-0">
@@ -298,7 +307,7 @@ export default function EBBCFloatingBanner() {
           )}
 
           <Link
-            href="/ebbc2026"
+            href={buttonHref}
             className="group mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#CC8591] px-5 text-xs font-extrabold text-white transition hover:-translate-y-0.5 hover:bg-white hover:text-[#0D1D34]"
           >
             {eventStatus === "upcoming" && (
