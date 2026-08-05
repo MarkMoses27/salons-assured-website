@@ -6,8 +6,11 @@ import {
   Cormorant_Garamond,
   Manrope,
 } from "next/font/google";
+
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import EBBCFloatingBanner from "../components/EBBCFloatingBanner";
+
 import "./globals.css";
 
 const manrope = Manrope({
@@ -146,6 +149,8 @@ export default function RootLayout({
         <Navbar />
 
         {children}
+
+        <EBBCFloatingBanner />
 
         <Footer />
       </body>
