@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { sendEbbc2026TicketEmailsForOrder } from "@/lib/ebbc2026/email";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -95,6 +96,49 @@ function redirectToResult(
       message,
     ),
   );
+}
+
+async function sendTicketEmailsSafely(
+  orderId: string,
+  orderNumber: string,
+) {
+  try {
+    const result =
+      await sendEbbc2026TicketEmailsForOrder(
+        orderId,
+      );
+
+    console.log(
+      "EBBC2026 ticket email delivery completed:",
+      {
+        orderNumber,
+        totalTickets:
+          result.totalTickets,
+        sent: result.sent,
+        skipped: result.skipped,
+        failed: result.failed,
+      },
+    );
+
+    if (result.failed > 0) {
+      console.error(
+        "One or more EBBC2026 ticket emails failed:",
+        {
+          orderNumber,
+          failed: result.failed,
+        },
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error(
+      `EBBC2026 automatic ticket email delivery failed for order ${orderNumber}:`,
+      error,
+    );
+
+    return null;
+  }
 }
 
 export async function GET(request: Request) {
@@ -496,6 +540,39 @@ export async function GET(request: Request) {
         "successful" &&
       order.payment_status === "paid"
     ) {
+      const retryTime =
+        new Date().toISOString();
+
+      const {
+        error:
+          pendingTicketActivationError,
+      } = await supabaseAdmin
+        .from("ebbc_tickets")
+        .update({
+          payment_id: payment.id,
+          ticket_status: "active",
+          issued_at: retryTime,
+        })
+        .eq("order_id", order.id)
+        .eq(
+          "ticket_status",
+          "pending",
+        );
+
+      if (
+        pendingTicketActivationError
+      ) {
+        console.error(
+          "Existing payment ticket activation retry error:",
+          pendingTicketActivationError,
+        );
+      }
+
+      await sendTicketEmailsSafely(
+        order.id,
+        order.order_number,
+      );
+
       return redirectToResult(
         request,
         "success",
@@ -610,6 +687,11 @@ export async function GET(request: Request) {
         "Payment succeeded, but the tickets could not be activated automatically.",
       );
     }
+
+    await sendTicketEmailsSafely(
+      order.id,
+      order.order_number,
+    );
 
     return redirectToResult(
       request,
