@@ -1,10 +1,10 @@
-
 import {
   createHmac,
   timingSafeEqual,
 } from "crypto";
 import { NextResponse } from "next/server";
 
+import { sendEbbc2026TicketEmailsForOrder } from "@/lib/ebbc2026/email";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -86,6 +86,39 @@ function jsonResponse(
   return NextResponse.json(body, {
     status,
   });
+}
+
+async function sendTicketEmailsForWebhook(
+  orderId: string,
+  orderNumber: string,
+) {
+  try {
+    const result =
+      await sendEbbc2026TicketEmailsForOrder(
+        orderId,
+      );
+
+    console.log(
+      "EBBC2026 webhook ticket email delivery completed:",
+      {
+        orderNumber,
+        totalTickets:
+          result.totalTickets,
+        sent: result.sent,
+        skipped: result.skipped,
+        failed: result.failed,
+      },
+    );
+
+    return result;
+  } catch (error) {
+    console.error(
+      `EBBC2026 webhook ticket email delivery failed for order ${orderNumber}:`,
+      error,
+    );
+
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -297,7 +330,9 @@ export async function POST(request: Request) {
     }
 
     if (
-      String(payment.provider).toLowerCase() !==
+      String(
+        payment.provider,
+      ).toLowerCase() !==
       "paystack"
     ) {
       return jsonResponse(
@@ -347,16 +382,18 @@ export async function POST(request: Request) {
       order.total_amount_kes,
     );
 
-    const storedPaymentAmountKes = Number(
-      payment.amount_kes,
-    );
+    const storedPaymentAmountKes =
+      Number(
+        payment.amount_kes,
+      );
 
     const expectedAmountSubunit =
       expectedAmountKes * 100;
 
-    const receivedAmountSubunit = Number(
-      transaction.amount,
-    );
+    const receivedAmountSubunit =
+      Number(
+        transaction.amount,
+      );
 
     const expectedCurrency = String(
       order.currency || "KES",
@@ -489,7 +526,8 @@ export async function POST(request: Request) {
     }
 
     const paystackEmail = String(
-      transaction.customer?.email || "",
+      transaction.customer?.email ||
+        "",
     )
       .trim()
       .toLowerCase();
@@ -659,13 +697,76 @@ export async function POST(request: Request) {
       );
     }
 
+    const emailDelivery =
+      await sendTicketEmailsForWebhook(
+        order.id,
+        order.order_number,
+      );
+
+    /*
+     * If SMTP or ticket-email generation
+     * completely failed, return a temporary
+     * server error. Paystack can retry the
+     * charge.success webhook. Payment and
+     * ticket updates above are idempotent,
+     * while the delivery table prevents
+     * duplicate emails.
+     */
+    if (!emailDelivery) {
+      return jsonResponse(
+        {
+          ok: false,
+          message:
+            "Payment and tickets were confirmed, but ticket email delivery failed and should be retried.",
+          reference,
+          orderNumber:
+            order.order_number,
+        },
+        500,
+      );
+    }
+
+    /*
+     * If one or more individual ticket
+     * emails failed, also allow Paystack
+     * to retry. Successfully sent tickets
+     * will be skipped by duplicate-delivery
+     * protection on the next attempt.
+     */
+    if (emailDelivery.failed > 0) {
+      console.error(
+        "EBBC2026 webhook completed with ticket email failures:",
+        {
+          reference,
+          orderNumber:
+            order.order_number,
+          failed:
+            emailDelivery.failed,
+        },
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+          message:
+            "Payment and tickets were confirmed, but one or more ticket emails failed and should be retried.",
+          reference,
+          orderNumber:
+            order.order_number,
+          emailDelivery,
+        },
+        500,
+      );
+    }
+
     return jsonResponse({
       ok: true,
       message:
-        "The Paystack payment was confirmed and the EBBC2026 tickets were activated.",
+        "The Paystack payment was confirmed, the EBBC2026 tickets were activated, and ticket email delivery was processed.",
       reference,
       orderNumber:
         order.order_number,
+      emailDelivery,
     });
   } catch (error) {
     console.error(
