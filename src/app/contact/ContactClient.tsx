@@ -89,11 +89,11 @@ const contactMethods = [
     label:
       "Email",
     value:
-      "info@salonsassured.com",
+      "salonsassuredkenya@gmail.com",
     secondary:
       "Business and partnership enquiries",
     href:
-      "mailto:info@salonsassured.com",
+      "mailto:salonsassuredkenya@gmail.com",
     icon:
       Mail,
   },

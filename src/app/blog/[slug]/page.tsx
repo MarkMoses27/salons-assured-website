@@ -716,7 +716,7 @@ export default async function BlogArticlePage({
           </div>
 
           <a
-            href="mailto:info@salonsassured.co.ke"
+            href="mailto:salonsassuredkenya@gmail.com"
             className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#071b33] px-6 text-[12px] font-extrabold text-white transition-colors hover:bg-[#b87586]"
           >
             <Mail className="h-4 w-4" />

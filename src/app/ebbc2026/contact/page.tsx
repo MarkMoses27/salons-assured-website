@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+
 import {
   ArrowLeft,
   ArrowRight,
   Building2,
   CalendarDays,
+  Mail,
   MapPin,
   MessageCircle,
   Phone,
@@ -43,22 +45,26 @@ const enquiryOptions = [
   {
     icon: Ticket,
     title: "Ticket Support",
-    text: "Get assistance with registration, ticket details and convention access.",
+    text:
+      "Get assistance with registration, ticket details and convention access.",
   },
   {
     icon: Users,
     title: "Group Registration",
-    text: "Register teams from salons, spas, businesses, schools or organisations.",
+    text:
+      "Register teams from salons, spas, businesses, schools or organisations.",
   },
   {
     icon: MessageCircle,
     title: "Speaker Applications",
-    text: "Submit an enquiry about speaking or participating in the programme.",
+    text:
+      "Submit an enquiry about speaking or participating in the programme.",
   },
   {
     icon: Building2,
     title: "Exhibitors and Sponsors",
-    text: "Ask about exhibition opportunities, partnerships and sponsorship packages.",
+    text:
+      "Ask about exhibition opportunities, partnerships and sponsorship packages.",
   },
 ];
 
@@ -110,11 +116,37 @@ export default function EBBC2026ContactPage() {
                 </h2>
 
                 <p className="mt-5 text-[13px] leading-7 text-white/55">
-                  WhatsApp is currently the primary
-                  EBBC2026 support channel.
+                  Contact the EBBC2026 team by
+                  email, WhatsApp or phone for
+                  assistance.
                 </p>
 
                 <div className="mt-8 space-y-3">
+                  {/* EMAIL */}
+                  <a
+                    href="mailto:salonsassuredkenya@gmail.com"
+                    className="group flex items-center justify-between rounded-[16px] border border-white/10 bg-white/[0.06] px-4 py-4 transition hover:border-[#CC8591]/50 hover:bg-[#CC8591]/10"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-[#CC8591]">
+                        <Mail className="h-5 w-5" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-[8px] font-extrabold uppercase tracking-[0.16em] text-white/40">
+                          Email
+                        </p>
+
+                        <p className="mt-1 break-all text-sm font-extrabold">
+                          salonsassuredkenya@gmail.com
+                        </p>
+                      </div>
+                    </div>
+
+                    <ArrowRight className="ml-3 h-4 w-4 shrink-0 text-[#CC8591] transition-transform group-hover:translate-x-1" />
+                  </a>
+
+                  {/* WHATSAPP */}
                   <a
                     href={EBBC2026.contacts.whatsappUrl}
                     target="_blank"
@@ -122,13 +154,13 @@ export default function EBBC2026ContactPage() {
                     className="group flex items-center justify-between rounded-[16px] border border-white/10 bg-white/[0.06] px-4 py-4 transition hover:border-[#CC8591]/50 hover:bg-[#CC8591]/10"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="grid h-10 w-10 place-items-center rounded-[13px] bg-[#CC8591]">
+                      <div className="grid h-10 w-10 place-items-center rounded-[13px] bg-white/10 text-[#CC8591]">
                         <MessageCircle className="h-5 w-5" />
                       </div>
 
                       <div>
                         <p className="text-[8px] font-extrabold uppercase tracking-[0.16em] text-white/40">
-                          Primary Support
+                          WhatsApp
                         </p>
 
                         <p className="mt-1 text-sm font-extrabold">
@@ -140,6 +172,7 @@ export default function EBBC2026ContactPage() {
                     <ArrowRight className="h-4 w-4 text-[#CC8591] transition-transform group-hover:translate-x-1" />
                   </a>
 
+                  {/* PRIMARY PHONE */}
                   <a
                     href={`tel:${EBBC2026.contacts.primaryPhone}`}
                     className="flex items-center gap-3 rounded-[16px] border border-white/10 bg-white/[0.06] px-4 py-4 transition hover:border-[#CC8591]/50 hover:bg-[#CC8591]/10"
@@ -159,6 +192,7 @@ export default function EBBC2026ContactPage() {
                     </div>
                   </a>
 
+                  {/* SECONDARY PHONE */}
                   <a
                     href={`tel:${EBBC2026.contacts.secondaryPhone}`}
                     className="flex items-center gap-3 rounded-[16px] border border-white/10 bg-white/[0.06] px-4 py-4 transition hover:border-[#CC8591]/50 hover:bg-[#CC8591]/10"

@@ -279,25 +279,23 @@ export default function TermsOfUsePage() {
             </p>
 
             <div className="mt-6 border-y border-[#071b33]/10 bg-white">
-              {contents.map(
-                (item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    className="group grid grid-cols-[38px_1fr_20px] items-center gap-3 border-b border-[#071b33]/10 px-5 py-4 last:border-b-0 transition-colors duration-300 hover:bg-[#fbf4f6]"
-                  >
-                    <span className="[font-family:var(--font-display)] text-[15px] font-semibold italic text-[#b87586]/65">
-                      {item.number}
-                    </span>
+              {contents.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="group grid grid-cols-[38px_1fr_20px] items-center gap-3 border-b border-[#071b33]/10 px-5 py-4 last:border-b-0 transition-colors duration-300 hover:bg-[#fbf4f6]"
+                >
+                  <span className="[font-family:var(--font-display)] text-[15px] font-semibold italic text-[#b87586]/65">
+                    {item.number}
+                  </span>
 
-                    <span className="text-[11px] font-semibold leading-5 text-[#071b33]/68 transition-colors group-hover:text-[#071b33]">
-                      {item.label}
-                    </span>
+                  <span className="text-[11px] font-semibold leading-5 text-[#071b33]/68 transition-colors group-hover:text-[#071b33]">
+                    {item.label}
+                  </span>
 
-                    <ArrowRight className="h-3.5 w-3.5 text-[#b87586] transition-transform duration-300 group-hover:translate-x-1" />
-                  </a>
-                ),
-              )}
+                  <ArrowRight className="h-3.5 w-3.5 text-[#b87586] transition-transform duration-300 group-hover:translate-x-1" />
+                </a>
+              ))}
             </div>
           </aside>
 
@@ -741,7 +739,7 @@ export default function TermsOfUsePage() {
                 </a>
 
                 <a
-                  href="mailto:info@salonsassured.com"
+                  href="mailto:salonsassuredkenya@gmail.com"
                   className="group border border-[#071b33]/10 bg-[#f8f5f3] p-5 transition-colors hover:bg-[#fbf4f6]"
                 >
                   <Mail className="h-5 w-5 text-[#b87586]" />
@@ -751,7 +749,7 @@ export default function TermsOfUsePage() {
                   </p>
 
                   <p className="mt-2 break-all text-[12px] font-semibold text-[#071b33]">
-                    info@salonsassured.com
+                    salonsassuredkenya@gmail.com
                   </p>
                 </a>
 

@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mail, MapPin, Phone, ShieldCheck } from "lucide-react";
+import {
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -155,11 +160,11 @@ export default function PrivacyPolicyPage() {
                 </a>
 
                 <a
-                  href="mailto:info@salonsassured.co.ke"
+                  href="mailto:salonsassuredkenya@gmail.com"
                   className="flex gap-3 transition hover:text-[#b87586]"
                 >
                   <Mail className="mt-0.5 h-5 w-5 text-[#b87586]" />
-                  info@salonsassured.co.ke
+                  salonsassuredkenya@gmail.com
                 </a>
 
                 <p className="flex gap-3">
@@ -202,13 +207,16 @@ export default function PrivacyPolicyPage() {
                 For questions about this Privacy Policy, contact Salons Assured
                 Kenya Ltd through{" "}
                 <a
-                  href="mailto:info@salonsassured.co.ke"
+                  href="mailto:salonsassuredkenya@gmail.com"
                   className="font-bold text-[#b87586]"
                 >
-                  info@salonsassured.co.ke
+                  salonsassuredkenya@gmail.com
                 </a>{" "}
                 or call/WhatsApp{" "}
-                <a href="tel:+254715500268" className="font-bold text-[#b87586]">
+                <a
+                  href="tel:+254715500268"
+                  className="font-bold text-[#b87586]"
+                >
                   0715500268
                 </a>
                 .

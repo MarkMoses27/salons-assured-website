@@ -86,7 +86,7 @@ const contactPageJsonLd = {
     ],
 
     email:
-      "info@salonsassured.com",
+      "salonsassuredkenya@gmail.com",
 
     address: {
       "@type":

@@ -39,7 +39,7 @@ export const EBBC2026 = {
     primaryPhone: "0715500268",
     secondaryPhone: "0706551028",
     whatsappUrl: "https://wa.me/254715500268",
-    email: "",
+    email: "salonsassuredkenya@gmail.com",
   },
 
   routes: {

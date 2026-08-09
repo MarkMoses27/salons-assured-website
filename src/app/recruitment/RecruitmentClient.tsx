@@ -1003,12 +1003,12 @@ export default function RecruitmentClient() {
               </a>
 
               <a
-                href="mailto:info@salonsassured.com"
+                href="mailto:salonsassuredkenya@gmail.com"
                 className="mt-5 flex items-center gap-4 text-[12px] font-bold text-white/70 transition-colors hover:text-white"
               >
                 <Mail className="h-5 w-5 text-[#d9a3af]" />
 
-                info@salonsassured.com
+                salonsassuredkenya@gmail.com
               </a>
 
               <p className="mt-5 flex items-center gap-4 text-[12px] font-bold text-white/70">

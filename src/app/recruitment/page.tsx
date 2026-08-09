@@ -92,7 +92,7 @@ const recruitmentJsonLd = {
       "+254715500268",
 
     email:
-      "info@salonsassured.com",
+      "salonsassuredkenya@gmail.com",
 
     address: {
       "@type":

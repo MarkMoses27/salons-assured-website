@@ -393,7 +393,7 @@ export default function Footer() {
                   </a>
 
                   <a
-                    href="mailto:info@salonsassured.com"
+                    href="mailto:salonsassuredkenya@gmail.com"
                     className="group flex gap-4 py-5"
                   >
                     <Mail
@@ -407,7 +407,7 @@ export default function Footer() {
                       </p>
 
                       <p className="mt-2 break-all text-[12px] font-medium leading-6 text-white/80 transition-colors group-hover:text-white">
-                        info@salonsassured.com
+                        salonsassuredkenya@gmail.com
                       </p>
                     </div>
                   </a>

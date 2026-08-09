@@ -1421,8 +1421,8 @@ export default function Navbar() {
                   0715 500 268
                 </a>
 
-                <a href="mailto:info@salonsassured.com">
-                  info@salonsassured.com
+                <a href="mailto:salonsassuredkenya@gmail.com">
+                  salonsassuredkenya@gmail.com
                 </a>
               </div>
             </div>
