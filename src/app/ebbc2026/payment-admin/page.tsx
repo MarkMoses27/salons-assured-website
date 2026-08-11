@@ -46,10 +46,15 @@ type SessionResponse = {
 type VerifyResponse = {
   ok?: boolean;
   alreadyVerified?: boolean;
+  fullyPaid?: boolean;
+  ticketActivated?: boolean;
   message?: string;
   orderNumber?: string;
   buyerName?: string;
-  amountKes?: number;
+  paymentAmountKes?: number;
+  totalAmountKes?: number;
+  totalPaidKes?: number;
+  balanceKes?: number;
   mpesaCode?: string;
   ticketQuantity?: number;
   verifiedBy?: string;
@@ -64,41 +69,74 @@ function formatMoney(
 }
 
 export default function EBBC2026PaymentAdminPage() {
-  const [authState, setAuthState] =
+  const [
+    authState,
+    setAuthState,
+  ] =
     useState<AuthState>(
       "loading",
     );
 
-  const [staffName, setStaffName] =
+  const [
+    staffName,
+    setStaffName,
+  ] =
     useState("");
 
-  const [email, setEmail] =
+  const [
+    email,
+    setEmail,
+  ] =
     useState("");
 
-  const [password, setPassword] =
+  const [
+    password,
+    setPassword,
+  ] =
     useState("");
 
-  const [loginLoading, setLoginLoading] =
+  const [
+    loginLoading,
+    setLoginLoading,
+  ] =
     useState(false);
 
-  const [loginError, setLoginError] =
+  const [
+    loginError,
+    setLoginError,
+  ] =
     useState("");
 
-  const [orderNumber, setOrderNumber] =
+  const [
+    orderNumber,
+    setOrderNumber,
+  ] =
     useState("");
 
-  const [mpesaCode, setMpesaCode] =
+  const [
+    mpesaCode,
+    setMpesaCode,
+  ] =
     useState("");
 
-  const [amount, setAmount] =
+  const [
+    amount,
+    setAmount,
+  ] =
     useState("");
 
-  const [verifyState, setVerifyState] =
+  const [
+    verifyState,
+    setVerifyState,
+  ] =
     useState<VerifyState>(
       "idle",
     );
 
-  const [result, setResult] =
+  const [
+    result,
+    setResult,
+  ] =
     useState<VerifyResponse | null>(
       null,
     );
@@ -115,7 +153,8 @@ export default function EBBC2026PaymentAdminPage() {
       const {
         data: sessionData,
       } =
-        await supabase.auth.getSession();
+        await supabase.auth
+          .getSession();
 
       const accessToken =
         sessionData.session
@@ -132,14 +171,14 @@ export default function EBBC2026PaymentAdminPage() {
         await fetch(
           "/api/ebbc2026/scanner/session",
           {
-            method: "GET",
-
+            method:
+              "GET",
             headers: {
               Authorization:
                 `Bearer ${accessToken}`,
             },
-
-            cache: "no-store",
+            cache:
+              "no-store",
           },
         );
 
@@ -152,7 +191,8 @@ export default function EBBC2026PaymentAdminPage() {
         !data.ok ||
         !data.authorized
       ) {
-        await supabase.auth.signOut();
+        await supabase.auth
+          .signOut();
 
         setAuthState(
           "signed_out",
@@ -228,7 +268,6 @@ export default function EBBC2026PaymentAdminPage() {
     setLoginLoading(
       true,
     );
-
     setLoginError("");
 
     try {
@@ -262,13 +301,12 @@ export default function EBBC2026PaymentAdminPage() {
         await fetch(
           "/api/ebbc2026/scanner/session",
           {
-            method: "GET",
-
+            method:
+              "GET",
             headers: {
               Authorization:
                 `Bearer ${data.session.access_token}`,
             },
-
             cache:
               "no-store",
           },
@@ -283,7 +321,8 @@ export default function EBBC2026PaymentAdminPage() {
         !sessionResult.ok ||
         !sessionResult.authorized
       ) {
-        await supabase.auth.signOut();
+        await supabase.auth
+          .signOut();
 
         setLoginError(
           sessionResult.message ||
@@ -297,7 +336,8 @@ export default function EBBC2026PaymentAdminPage() {
         sessionResult.staff
           ?.role !== "admin"
       ) {
-        await supabase.auth.signOut();
+        await supabase.auth
+          .signOut();
 
         setLoginError(
           "Only an EBBC2026 administrator can verify payments.",
@@ -337,7 +377,8 @@ export default function EBBC2026PaymentAdminPage() {
     const supabase =
       getSupabaseBrowserClient();
 
-    await supabase.auth.signOut();
+    await supabase.auth
+      .signOut();
 
     setStaffName("");
     setAuthState(
@@ -374,9 +415,7 @@ export default function EBBC2026PaymentAdminPage() {
         .toUpperCase();
 
     const amountKes =
-      Number(
-        amount,
-      );
+      Number(amount);
 
     setResult(null);
 
@@ -440,13 +479,15 @@ export default function EBBC2026PaymentAdminPage() {
           "",
           `Order: ${cleanOrderNumber}`,
           `M-Pesa Code: ${cleanMpesaCode}`,
-          `Amount: KES ${formatMoney(
+          `Payment received: KES ${formatMoney(
             amountKes,
           )}`,
           "",
-          "Only continue if you have confirmed this payment in the official Equity/M-Pesa records.",
+          "Only continue if you have confirmed this transaction in the official Equity/M-Pesa records.",
           "",
-          "This will activate the QR ticket and send the ticket email.",
+          "This payment will be added to the customer's order.",
+          "If a balance remains, the QR ticket will stay inactive.",
+          "The QR ticket activates only after the order is fully paid.",
         ].join("\n"),
       );
 
@@ -463,7 +504,8 @@ export default function EBBC2026PaymentAdminPage() {
         getSupabaseBrowserClient();
 
       const {
-        data: sessionData,
+        data:
+          sessionData,
       } =
         await supabase.auth
           .getSession();
@@ -496,26 +538,20 @@ export default function EBBC2026PaymentAdminPage() {
           {
             method:
               "POST",
-
             headers: {
               "Content-Type":
                 "application/json",
-
               Authorization:
                 `Bearer ${accessToken}`,
             },
-
             body:
               JSON.stringify({
                 orderNumber:
                   cleanOrderNumber,
-
                 mpesaCode:
                   cleanMpesaCode,
-
                 amountKes,
               }),
-
             cache:
               "no-store",
           },
@@ -544,7 +580,6 @@ export default function EBBC2026PaymentAdminPage() {
         "success",
       );
 
-      setOrderNumber("");
       setMpesaCode("");
       setAmount("");
     } catch (error) {
@@ -560,7 +595,7 @@ export default function EBBC2026PaymentAdminPage() {
       setResult({
         ok: false,
         message:
-          "The payment could not be verified. No second attempt should be made until you confirm the first result.",
+          "The payment could not be verified. Do not retry until the first result has been checked.",
       });
     }
   }
@@ -599,8 +634,8 @@ export default function EBBC2026PaymentAdminPage() {
             <p className="mt-3 text-sm leading-7 text-[#0D1D34]/60">
               {staffName ||
                 "This account"}{" "}
-              is signed in, but only
-              an EBBC2026 administrator
+              is signed in, but only an
+              EBBC2026 administrator
               can verify payments.
             </p>
 
@@ -668,9 +703,7 @@ export default function EBBC2026PaymentAdminPage() {
                 <input
                   type="email"
                   required
-                  value={
-                    email
-                  }
+                  value={email}
                   onChange={(
                     event,
                   ) =>
@@ -713,7 +746,6 @@ export default function EBBC2026PaymentAdminPage() {
               {loginError ? (
                 <div className="flex items-start gap-3 rounded-[15px] border border-red-200 bg-red-50 p-4 text-xs font-semibold leading-5 text-red-800">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
                   {loginError}
                 </div>
               ) : null}
@@ -781,6 +813,8 @@ export default function EBBC2026PaymentAdminPage() {
                 </h1>
 
                 <p className="mt-4 text-xs leading-6 text-white/55">
+                  Full or installment
+                  payments are supported.
                   Signed in as{" "}
                   <strong className="text-white">
                     {staffName}
@@ -799,12 +833,14 @@ export default function EBBC2026PaymentAdminPage() {
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
 
               <p className="text-xs leading-6">
-                Verify the payment in
-                the official Equity or
-                M-Pesa records before
-                activating the ticket.
-                Do not approve using a
-                screenshot alone.
+                Confirm every transaction
+                in the official Equity or
+                M-Pesa records. Each
+                installment must have its
+                own genuine M-Pesa code.
+                The QR ticket activates
+                only after the full order
+                balance reaches KES 0.
               </p>
             </div>
 
@@ -870,7 +906,8 @@ export default function EBBC2026PaymentAdminPage() {
 
               <label className="block">
                 <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0D1D34]/45">
-                  Amount Received (KES)
+                  This Payment Amount
+                  (KES)
                 </span>
 
                 <input
@@ -878,9 +915,7 @@ export default function EBBC2026PaymentAdminPage() {
                   required
                   min="1"
                   step="1"
-                  value={
-                    amount
-                  }
+                  value={amount}
                   onChange={(
                     event,
                   ) =>
@@ -890,9 +925,18 @@ export default function EBBC2026PaymentAdminPage() {
                         .value,
                     )
                   }
-                  placeholder="4500"
+                  placeholder="e.g. 1000"
                   className="mt-2 h-14 w-full rounded-[15px] border border-[#0D1D34]/10 bg-[#FAFAFA] px-4 text-sm font-black outline-none focus:border-[#CC8591] focus:ring-4 focus:ring-[#CC8591]/10"
                 />
+
+                <p className="mt-2 text-[10px] leading-5 text-[#0D1D34]/45">
+                  Enter the exact amount
+                  received for this
+                  transaction. It can be a
+                  partial installment or
+                  the full remaining
+                  balance.
+                </p>
               </label>
 
               {result ? (
@@ -900,7 +944,10 @@ export default function EBBC2026PaymentAdminPage() {
                   className={`rounded-[19px] border p-5 ${
                     verifyState ===
                     "success"
-                      ? "border-green-200 bg-green-50 text-green-900"
+                      ? result
+                          .fullyPaid
+                        ? "border-green-200 bg-green-50 text-green-900"
+                        : "border-blue-200 bg-blue-50 text-blue-900"
                       : "border-red-200 bg-red-50 text-red-900"
                   }`}
                 >
@@ -912,7 +959,7 @@ export default function EBBC2026PaymentAdminPage() {
                       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
                     )}
 
-                    <div>
+                    <div className="w-full">
                       <p className="text-sm font-extrabold">
                         {result.message ||
                           (verifyState ===
@@ -921,53 +968,101 @@ export default function EBBC2026PaymentAdminPage() {
                             : "Verification failed.")}
                       </p>
 
-                      {verifyState ===
-                        "success" &&
-                      result.orderNumber ? (
-                        <div className="mt-3 space-y-1 text-xs leading-5">
-                          <p>
-                            Order:{" "}
-                            <strong>
+                      {result.orderNumber ? (
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-xl bg-white/70 p-3">
+                            <p className="text-[9px] font-bold uppercase opacity-60">
+                              Order
+                            </p>
+                            <p className="mt-1 text-xs font-black">
                               {
                                 result.orderNumber
                               }
-                            </strong>
-                          </p>
-
-                          {result.buyerName ? (
-                            <p>
-                              Buyer:{" "}
-                              <strong>
-                                {
-                                  result.buyerName
-                                }
-                              </strong>
                             </p>
-                          ) : null}
+                          </div>
 
-                          {result.amountKes ? (
-                            <p>
-                              Amount:{" "}
-                              <strong>
+                          {result.paymentAmountKes !==
+                          undefined ? (
+                            <div className="rounded-xl bg-white/70 p-3">
+                              <p className="text-[9px] font-bold uppercase opacity-60">
+                                This Payment
+                              </p>
+                              <p className="mt-1 text-xs font-black">
                                 KES{" "}
                                 {formatMoney(
-                                  result.amountKes,
+                                  result.paymentAmountKes,
                                 )}
-                              </strong>
-                            </p>
+                              </p>
+                            </div>
                           ) : null}
 
-                          {result.ticketQuantity ? (
-                            <p>
-                              Tickets activated:{" "}
-                              <strong>
-                                {
-                                  result.ticketQuantity
-                                }
-                              </strong>
-                            </p>
+                          {result.totalAmountKes !==
+                          undefined ? (
+                            <div className="rounded-xl bg-white/70 p-3">
+                              <p className="text-[9px] font-bold uppercase opacity-60">
+                                Order Total
+                              </p>
+                              <p className="mt-1 text-xs font-black">
+                                KES{" "}
+                                {formatMoney(
+                                  result.totalAmountKes,
+                                )}
+                              </p>
+                            </div>
                           ) : null}
+
+                          {result.totalPaidKes !==
+                          undefined ? (
+                            <div className="rounded-xl bg-white/70 p-3">
+                              <p className="text-[9px] font-bold uppercase opacity-60">
+                                Total Paid
+                              </p>
+                              <p className="mt-1 text-xs font-black">
+                                KES{" "}
+                                {formatMoney(
+                                  result.totalPaidKes,
+                                )}
+                              </p>
+                            </div>
+                          ) : null}
+
+                          {result.balanceKes !==
+                          undefined ? (
+                            <div className="rounded-xl bg-white/70 p-3">
+                              <p className="text-[9px] font-bold uppercase opacity-60">
+                                Balance
+                              </p>
+                              <p className="mt-1 text-xs font-black">
+                                KES{" "}
+                                {formatMoney(
+                                  result.balanceKes,
+                                )}
+                              </p>
+                            </div>
+                          ) : null}
+
+                          <div className="rounded-xl bg-white/70 p-3">
+                            <p className="text-[9px] font-bold uppercase opacity-60">
+                              QR Status
+                            </p>
+                            <p className="mt-1 text-xs font-black">
+                              {result.ticketActivated
+                                ? "ACTIVE"
+                                : "LOCKED — BALANCE REMAINS"}
+                            </p>
+                          </div>
                         </div>
+                      ) : null}
+
+                      {result.buyerName ? (
+                        <p className="mt-3 text-xs">
+                          Buyer:{" "}
+                          <strong>
+                            {
+                              result.buyerName
+                            }
+                          </strong>
+                        </p>
                       ) : null}
                     </div>
                   </div>
@@ -991,18 +1086,20 @@ export default function EBBC2026PaymentAdminPage() {
                 ) : (
                   <>
                     <ShieldCheck className="h-5 w-5" />
-                    Verify & Activate Ticket
+                    Verify Payment
                   </>
                 )}
               </button>
             </form>
 
             <p className="mt-5 text-center text-[10px] leading-5 text-[#0D1D34]/40">
-              Successful verification
-              marks the order paid,
-              activates its QR ticket
-              and triggers the ticket
-              email.
+              Partial payments are
+              saved against the same
+              order. QR activation and
+              ticket email happen only
+              after verified payments
+              equal the full order
+              amount.
             </p>
           </div>
         </div>

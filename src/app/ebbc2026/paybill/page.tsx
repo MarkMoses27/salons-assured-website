@@ -6,6 +6,7 @@ import {
   MessageCircle,
   ShieldCheck,
   Smartphone,
+  WalletCards,
 } from "lucide-react";
 
 import { EBBC2026 } from "@/lib/ebbc2026/config";
@@ -21,7 +22,9 @@ type PageProps = {
 function cleanText(
   value: string | undefined,
 ) {
-  return String(value || "").trim();
+  return String(
+    value || "",
+  ).trim();
 }
 
 function formatMoney(
@@ -68,23 +71,26 @@ export default async function EBBC2026PaybillPage({
     [
       "Hello Salons Assured Kenya.",
       "",
-      "I have paid for my EBBC2026 registration via Equity Paybill.",
+      "I have made an EBBC2026 payment via Equity Paybill.",
       "",
       `Order number: ${
         orderNumber ||
         "PLEASE ADD ORDER NUMBER"
       }`,
-      `Amount: ${currency} ${
+      `Order total: ${currency} ${
         validAmount
           ? formatMoney(
               validAmount,
             )
-          : "PLEASE ADD AMOUNT"
+          : "PLEASE ADD ORDER TOTAL"
       }`,
       "",
+      "Amount paid this time: KES PLEASE ADD AMOUNT PAID",
       "M-Pesa transaction code: PLEASE PASTE CODE HERE",
       "",
-      "Please verify my payment and activate my EBBC2026 ticket.",
+      "Please verify this payment against my EBBC2026 order.",
+      "",
+      "I understand that my QR ticket will only be activated after the full order balance has been paid and verified.",
     ].join("\n");
 
   const whatsappUrl =
@@ -121,10 +127,12 @@ export default async function EBBC2026PaybillPage({
             </h1>
 
             <p className="mx-auto mt-5 max-w-xl text-[13px] leading-7 text-white/65">
-              Complete your M-Pesa
-              payment using the
-              official EBBC2026
-              Paybill details below.
+              Pay the full amount at
+              once or pay in
+              installments. Every
+              payment is verified and
+              added to the same
+              EBBC2026 order.
             </p>
           </div>
 
@@ -139,11 +147,18 @@ export default async function EBBC2026PaybillPage({
                   {orderNumber ||
                     "Not available"}
                 </p>
+
+                <p className="mt-2 text-[10px] leading-5 text-[#0D1D34]/45">
+                  Keep this order
+                  number. Use the same
+                  order for every
+                  installment payment.
+                </p>
               </div>
 
               <div className="rounded-[20px] border border-[#0D1D34]/8 bg-[#FAFAFA] p-5">
                 <p className="text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#0D1D34]/40">
-                  Amount Due
+                  Order Total
                 </p>
 
                 <p className="mt-3 text-xl font-black text-[#CC8591]">
@@ -153,6 +168,38 @@ export default async function EBBC2026PaybillPage({
                         validAmount,
                       )
                     : "—"}
+                </p>
+
+                <p className="mt-2 text-[10px] leading-5 text-[#0D1D34]/45">
+                  You may pay this
+                  amount in full or in
+                  smaller installments.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-start gap-4 rounded-[22px] border border-blue-200 bg-blue-50 p-5 text-blue-950">
+              <WalletCards className="mt-0.5 h-5 w-5 shrink-0" />
+
+              <div>
+                <p className="text-sm font-extrabold">
+                  Installment payments
+                  accepted
+                </p>
+
+                <p className="mt-2 text-xs leading-6">
+                  You can pay mdogo
+                  mdogo. Each payment
+                  must have its own
+                  M-Pesa transaction
+                  code and must be
+                  submitted using the
+                  same EBBC2026 order
+                  number. Your QR
+                  ticket remains locked
+                  until the full balance
+                  has been paid and
+                  verified.
                 </p>
               </div>
             </div>
@@ -197,12 +244,13 @@ export default async function EBBC2026PaybillPage({
                   "Enter Business Number 247247.",
                   "Enter Account Number 100831.",
                   validAmount
-                    ? `Enter the exact amount: KES ${formatMoney(
+                    ? `Enter either the full KES ${formatMoney(
                         validAmount,
-                      )}.`
-                    : "Enter the exact amount shown on your registration.",
-                  "Enter your M-Pesa PIN and complete payment.",
+                      )} or the installment amount you want to pay today.`
+                    : "Enter either the full order amount or the installment amount you want to pay today.",
+                  "Enter your M-Pesa PIN and complete the payment.",
                   "Keep the M-Pesa transaction code.",
+                  "Send the transaction code, amount paid and your EBBC2026 order number to Salons Assured Kenya using the WhatsApp button below.",
                 ].map(
                   (
                     instruction,
@@ -234,22 +282,22 @@ export default async function EBBC2026PaybillPage({
 
               <div>
                 <p className="text-sm font-extrabold">
-                  Payment verification required
+                  Payment verification
+                  required
                 </p>
 
                 <p className="mt-2 text-xs leading-6">
+                  Every full or partial
+                  Paybill payment must
+                  be verified by Salons
+                  Assured Kenya. Partial
+                  payments are added to
+                  your order balance.
                   Your QR ticket is
-                  not activated
-                  immediately after a
-                  Paybill payment.
-                  Send the M-Pesa
-                  transaction code and
-                  your order number to
-                  Salons Assured Kenya.
-                  The ticket will be
                   activated and emailed
-                  after the payment is
-                  verified.
+                  only after verified
+                  payments reach the
+                  full order amount.
                 </p>
               </div>
             </div>
@@ -263,15 +311,15 @@ export default async function EBBC2026PaybillPage({
               className="group mt-7 inline-flex h-[58px] w-full items-center justify-center gap-3 rounded-full bg-[#1FAF5A] px-7 text-sm font-extrabold text-white shadow-[0_16px_35px_rgba(31,175,90,0.22)] transition hover:-translate-y-0.5 hover:bg-[#0D1D34]"
             >
               <MessageCircle className="h-5 w-5" />
-              Send M-Pesa Confirmation
+              Send Payment Confirmation
               on WhatsApp
             </a>
 
             <div className="mt-6 flex items-center justify-center gap-2 text-center text-[10px] font-bold text-[#0D1D34]/45">
               <ShieldCheck className="h-4 w-4 text-[#CC8591]" />
-              Only verified payments
-              activate EBBC2026 QR
-              tickets.
+              QR activates only when
+              the verified balance
+              reaches KES 0.
             </div>
 
             <div className="mt-8 border-t border-[#0D1D34]/8 pt-7 text-center">
@@ -281,10 +329,11 @@ export default async function EBBC2026PaybillPage({
                 One ticket is valid
                 for one attendee on
                 the selected event
-                day. Keep your
-                payment confirmation
-                until your ticket has
-                been received.
+                day. Keep every M-Pesa
+                confirmation until the
+                full payment has been
+                verified and your
+                ticket received.
               </p>
             </div>
           </div>
