@@ -3,6 +3,14 @@ import QRCode from "qrcode";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+const EVENT_DATES = [
+  "2026-11-17",
+  "2026-11-18",
+] as const;
+
+type EventDate =
+  (typeof EVENT_DATES)[number];
+
 type TicketRecord = {
   id: string;
   order_id: string;
@@ -15,6 +23,7 @@ type TicketRecord = {
   country: string | null;
   ticket_status: string;
   access_token: string;
+  event_date: string | null;
   issued_at: string | null;
 };
 
@@ -35,7 +44,9 @@ function getRequiredEnvironmentVariable(
   variableName: string,
 ) {
   const value =
-    process.env[variableName]?.trim();
+    process.env[
+      variableName
+    ]?.trim();
 
   if (!value) {
     throw new Error(
@@ -48,20 +59,72 @@ function getRequiredEnvironmentVariable(
 
 function getAppUrl() {
   return (
-    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env
+      .NEXT_PUBLIC_APP_URL ||
     "https://www.salonsassured.com"
-  ).replace(/\/$/, "");
+  ).replace(
+    /\/$/,
+    "",
+  );
 }
 
 function escapeHtml(
-  value: string | null | undefined,
+  value:
+    | string
+    | null
+    | undefined,
 ) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(
+    value || "",
+  )
+    .replaceAll(
+      "&",
+      "&amp;",
+    )
+    .replaceAll(
+      "<",
+      "&lt;",
+    )
+    .replaceAll(
+      ">",
+      "&gt;",
+    )
+    .replaceAll(
+      '"',
+      "&quot;",
+    )
+    .replaceAll(
+      "'",
+      "&#039;",
+    );
+}
+
+function isEventDate(
+  value: string,
+): value is EventDate {
+  return EVENT_DATES.includes(
+    value as EventDate,
+  );
+}
+
+function formatEventDate(
+  value: string | null,
+) {
+  if (
+    value ===
+    "2026-11-17"
+  ) {
+    return "17 November 2026";
+  }
+
+  if (
+    value ===
+    "2026-11-18"
+  ) {
+    return "18 November 2026";
+  }
+
+  return "Event day unavailable";
 }
 
 function createTransporter() {
@@ -70,11 +133,12 @@ function createTransporter() {
       "SMTP_HOST",
     );
 
-  const smtpPort = Number(
-    getRequiredEnvironmentVariable(
-      "SMTP_PORT",
-    ),
-  );
+  const smtpPort =
+    Number(
+      getRequiredEnvironmentVariable(
+        "SMTP_PORT",
+      ),
+    );
 
   const smtpUser =
     getRequiredEnvironmentVariable(
@@ -87,7 +151,9 @@ function createTransporter() {
     );
 
   if (
-    !Number.isInteger(smtpPort) ||
+    !Number.isInteger(
+      smtpPort,
+    ) ||
     smtpPort <= 0
   ) {
     throw new Error(
@@ -96,18 +162,29 @@ function createTransporter() {
   }
 
   return nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpPort === 465,
-    requireTLS: smtpPort === 587,
+    host:
+      smtpHost,
+
+    port:
+      smtpPort,
+
+    secure:
+      smtpPort === 465,
+
+    requireTLS:
+      smtpPort === 587,
 
     auth: {
-      user: smtpUser,
-      pass: smtpPass,
+      user:
+        smtpUser,
+
+      pass:
+        smtpPass,
     },
 
     tls: {
-      minVersion: "TLSv1.2",
+      minVersion:
+        "TLSv1.2",
     },
   });
 }
@@ -116,38 +193,60 @@ function createPlainTextEmail(
   ticket: TicketRecord,
   secureTicketUrl: string,
 ) {
+  const eventDay =
+    formatEventDate(
+      ticket.event_date,
+    );
+
   return [
     `Hello ${ticket.attendee_full_name},`,
     "",
     "Your payment for the Elevate Beauty Business Convention 2026 has been confirmed.",
     "",
     `Ticket number: ${ticket.ticket_number}`,
-    "Convention dates: 17–18 November 2026",
+    `Selected event day: ${eventDay}`,
     "Venue: CITAM Valley Road, Nairobi",
+    "",
+    "IMPORTANT:",
+    `This ticket is valid only on ${eventDay}.`,
+    "One ticket = one attendee = one selected event day.",
+    "If you are attending both event days, you need a separate ticket for each day.",
     "",
     "Open your secure ticket using the link below:",
     secureTicketUrl,
     "",
     "Present the QR code on your secure ticket during entry verification.",
+    "For same-day re-entry, present the same QR code again.",
     "",
-    "Keep this ticket link private because it uniquely identifies your registration.",
+    "Keep this ticket link and QR code private because they uniquely identify your registration.",
     "",
     "Elevate Beauty Business Convention 2026",
     "Organised by Salons Assured Kenya Ltd",
-  ].join("\n");
+  ].join(
+    "\n",
+  );
 }
 
 function createHtmlEmail(
   ticket: TicketRecord,
   secureTicketUrl: string,
 ) {
-  const attendeeName = escapeHtml(
-    ticket.attendee_full_name,
-  );
+  const attendeeName =
+    escapeHtml(
+      ticket.attendee_full_name,
+    );
 
-  const ticketNumber = escapeHtml(
-    ticket.ticket_number,
-  );
+  const ticketNumber =
+    escapeHtml(
+      ticket.ticket_number,
+    );
+
+  const eventDay =
+    escapeHtml(
+      formatEventDate(
+        ticket.event_date,
+      ),
+    );
 
   const participantCategory =
     escapeHtml(
@@ -155,14 +254,16 @@ function createHtmlEmail(
         "Attendee",
     );
 
-  const organisation = escapeHtml(
-    ticket.organisation ||
-      "Not provided",
-  );
+  const organisation =
+    escapeHtml(
+      ticket.organisation ||
+        "Not provided",
+    );
 
-  const safeTicketUrl = escapeHtml(
-    secureTicketUrl,
-  );
+  const safeTicketUrl =
+    escapeHtml(
+      secureTicketUrl,
+    );
 
   return `
     <!doctype html>
@@ -173,7 +274,10 @@ function createHtmlEmail(
           name="viewport"
           content="width=device-width, initial-scale=1"
         />
-        <title>Your EBBC2026 Ticket</title>
+
+        <title>
+          Your EBBC2026 Ticket
+        </title>
       </head>
 
       <body
@@ -262,7 +366,9 @@ function createHtmlEmail(
                 "
               >
                 Hello
-                <strong>${attendeeName}</strong>,
+                <strong>
+                  ${attendeeName}
+                </strong>,
               </p>
 
               <p
@@ -340,7 +446,7 @@ function createHtmlEmail(
                         letter-spacing:1px;
                       "
                     >
-                      Dates
+                      Event Day
                     </td>
 
                     <td
@@ -353,7 +459,7 @@ function createHtmlEmail(
                         font-weight:800;
                       "
                     >
-                      17–18 November 2026
+                      ${eventDay}
                     </td>
                   </tr>
 
@@ -446,6 +552,42 @@ function createHtmlEmail(
 
               <div
                 style="
+                  margin-top:22px;
+                  padding:18px 20px;
+                  border:1px solid rgba(204,133,145,0.28);
+                  border-radius:18px;
+                  background:#fff7f8;
+                "
+              >
+                <p
+                  style="
+                    margin:0;
+                    color:#0d1d34;
+                    font-size:13px;
+                    font-weight:800;
+                  "
+                >
+                  Valid for ${eventDay} only
+                </p>
+
+                <p
+                  style="
+                    margin:8px 0 0;
+                    color:#657086;
+                    font-size:12px;
+                    line-height:1.7;
+                  "
+                >
+                  One ticket is valid for one attendee
+                  on one selected event day. Attending
+                  both days requires two separate
+                  tickets. For same-day re-entry, use
+                  the same QR code.
+                </p>
+              </div>
+
+              <div
+                style="
                   margin-top:30px;
                   text-align:center;
                 "
@@ -476,6 +618,17 @@ function createHtmlEmail(
                 >
                   Present this QR code for entry
                   verification
+                </p>
+
+                <p
+                  style="
+                    margin:7px 0 0;
+                    color:#657086;
+                    font-size:11px;
+                    line-height:1.6;
+                  "
+                >
+                  This QR is valid for ${eventDay}.
                 </p>
               </div>
 
@@ -514,9 +667,9 @@ function createHtmlEmail(
                   text-align:center;
                 "
               >
-                Keep this email and ticket link private.
-                The QR code uniquely identifies your
-                registration.
+                Keep this email, ticket link and QR
+                code private. They uniquely identify
+                the attendee's registration.
               </div>
             </div>
 
@@ -547,27 +700,47 @@ async function createDeliveryRecord(
   ticket: TicketRecord,
 ) {
   const {
-    data: existingDelivery,
-    error: existingDeliveryError,
-  } = await supabaseAdmin
-    .from("ebbc_ticket_deliveries")
-    .select(
-      "id, delivery_status",
-    )
-    .eq("ticket_id", ticket.id)
-    .eq("channel", "email")
-    .eq("message_type", "ticket")
-    .maybeSingle();
+    data:
+      existingDelivery,
 
-  if (existingDeliveryError) {
+    error:
+      existingDeliveryError,
+  } =
+    await supabaseAdmin
+      .from(
+        "ebbc_ticket_deliveries",
+      )
+      .select(
+        "id, delivery_status",
+      )
+      .eq(
+        "ticket_id",
+        ticket.id,
+      )
+      .eq(
+        "channel",
+        "email",
+      )
+      .eq(
+        "message_type",
+        "ticket",
+      )
+      .maybeSingle();
+
+  if (
+    existingDeliveryError
+  ) {
     throw new Error(
       `Could not check ticket delivery: ${existingDeliveryError.message}`,
     );
   }
 
-  if (existingDelivery) {
+  if (
+    existingDelivery
+  ) {
     const delivery =
-      existingDelivery as DeliveryRecord;
+      existingDelivery as
+        DeliveryRecord;
 
     if (
       delivery.delivery_status ===
@@ -578,62 +751,117 @@ async function createDeliveryRecord(
         "queued"
     ) {
       return {
-        deliveryId: delivery.id,
-        shouldSend: false,
+        deliveryId:
+          delivery.id,
+
+        shouldSend:
+          false,
       };
     }
 
     const {
-      error: retryUpdateError,
-    } = await supabaseAdmin
-      .from("ebbc_ticket_deliveries")
-      .update({
-        recipient:
-          ticket.attendee_email,
-        provider: "smtp",
-        delivery_status: "queued",
-        failure_reason: null,
-        provider_response: {},
-        sent_at: null,
-        delivered_at: null,
-      })
-      .eq("id", delivery.id);
+      error:
+        retryUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_ticket_deliveries",
+        )
+        .update({
+          recipient:
+            ticket.attendee_email,
 
-    if (retryUpdateError) {
+          provider:
+            "smtp",
+
+          delivery_status:
+            "queued",
+
+          failure_reason:
+            null,
+
+          provider_response:
+            {},
+
+          sent_at:
+            null,
+
+          delivered_at:
+            null,
+        })
+        .eq(
+          "id",
+          delivery.id,
+        );
+
+    if (
+      retryUpdateError
+    ) {
       throw new Error(
         `Could not queue ticket email retry: ${retryUpdateError.message}`,
       );
     }
 
     return {
-      deliveryId: delivery.id,
-      shouldSend: true,
+      deliveryId:
+        delivery.id,
+
+      shouldSend:
+        true,
     };
   }
 
   const {
-    data: newDelivery,
-    error: insertError,
-  } = await supabaseAdmin
-    .from("ebbc_ticket_deliveries")
-    .insert({
-      ticket_id: ticket.id,
-      channel: "email",
-      message_type: "ticket",
-      recipient:
-        ticket.attendee_email,
-      provider: "smtp",
-      delivery_status: "queued",
-      provider_response: {},
-    })
-    .select("id")
-    .single();
+    data:
+      newDelivery,
 
-  if (insertError) {
-    if (insertError.code === "23505") {
+    error:
+      insertError,
+  } =
+    await supabaseAdmin
+      .from(
+        "ebbc_ticket_deliveries",
+      )
+      .insert({
+        ticket_id:
+          ticket.id,
+
+        channel:
+          "email",
+
+        message_type:
+          "ticket",
+
+        recipient:
+          ticket.attendee_email,
+
+        provider:
+          "smtp",
+
+        delivery_status:
+          "queued",
+
+        provider_response:
+          {},
+      })
+      .select(
+        "id",
+      )
+      .single();
+
+  if (
+    insertError
+  ) {
+    if (
+      insertError.code ===
+      "23505"
+    ) {
       return {
-        deliveryId: null,
-        shouldSend: false,
+        deliveryId:
+          null,
+
+        shouldSend:
+          false,
       };
     }
 
@@ -643,10 +871,13 @@ async function createDeliveryRecord(
   }
 
   return {
-    deliveryId: String(
-      newDelivery.id,
-    ),
-    shouldSend: true,
+    deliveryId:
+      String(
+        newDelivery.id,
+      ),
+
+    shouldSend:
+      true,
   };
 }
 
@@ -660,61 +891,108 @@ async function markDeliveryFailed(
       : "Unknown email delivery error.";
 
   await supabaseAdmin
-    .from("ebbc_ticket_deliveries")
+    .from(
+      "ebbc_ticket_deliveries",
+    )
     .update({
-      delivery_status: "failed",
+      delivery_status:
+        "failed",
+
       failure_reason:
-        failureReason.slice(0, 1000),
+        failureReason.slice(
+          0,
+          1000,
+        ),
+
       provider_response: {
-        error: failureReason,
+        error:
+          failureReason,
       },
     })
-    .eq("id", deliveryId);
+    .eq(
+      "id",
+      deliveryId,
+    );
 }
 
 export async function sendEbbc2026TicketEmailsForOrder(
   orderId: string,
 ): Promise<TicketEmailDeliveryResult> {
-  const cleanOrderId = orderId.trim();
+  const cleanOrderId =
+    orderId.trim();
 
-  if (!cleanOrderId) {
+  if (
+    !cleanOrderId
+  ) {
     throw new Error(
       "The order ID is required.",
     );
   }
 
   const {
-    data: ticketRows,
-    error: ticketLookupError,
-  } = await supabaseAdmin
-    .from("ebbc_tickets")
-    .select(
-      "id, order_id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, organisation, country, ticket_status, access_token, issued_at",
-    )
-    .eq("order_id", cleanOrderId)
-    .eq("ticket_status", "active")
-    .order("created_at", {
-      ascending: true,
-    });
+    data:
+      ticketRows,
 
-  if (ticketLookupError) {
+    error:
+      ticketLookupError,
+  } =
+    await supabaseAdmin
+      .from(
+        "ebbc_tickets",
+      )
+      .select(
+        "id, order_id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, organisation, country, ticket_status, access_token, event_date, issued_at",
+      )
+      .eq(
+        "order_id",
+        cleanOrderId,
+      )
+      .eq(
+        "ticket_status",
+        "active",
+      )
+      .order(
+        "created_at",
+        {
+          ascending:
+            true,
+        },
+      );
+
+  if (
+    ticketLookupError
+  ) {
     throw new Error(
       `Could not retrieve active tickets: ${ticketLookupError.message}`,
     );
   }
 
   const tickets =
-    (ticketRows || []) as TicketRecord[];
+    (ticketRows ||
+      []) as TicketRecord[];
 
-  const result: TicketEmailDeliveryResult = {
-    orderId: cleanOrderId,
-    totalTickets: tickets.length,
-    sent: 0,
-    skipped: 0,
-    failed: 0,
-  };
+  const result:
+    TicketEmailDeliveryResult = {
+      orderId:
+        cleanOrderId,
 
-  if (tickets.length === 0) {
+      totalTickets:
+        tickets.length,
+
+      sent:
+        0,
+
+      skipped:
+        0,
+
+      failed:
+        0,
+    };
+
+  if (
+    tickets.length ===
+    0
+  ) {
     return result;
   }
 
@@ -727,14 +1005,20 @@ export async function sendEbbc2026TicketEmailsForOrder(
     );
 
   const emailFrom =
-    process.env.EMAIL_FROM?.trim() ||
+    process.env
+      .EMAIL_FROM?.trim() ||
     `Elevate Beauty Business Convention <${smtpUser}>`;
 
-  const appUrl = getAppUrl();
+  const appUrl =
+    getAppUrl();
 
-  for (const ticket of tickets) {
-    let deliveryId: string | null =
-      null;
+  for (
+    const ticket of
+    tickets
+  ) {
+    let deliveryId:
+      | string
+      | null = null;
 
     try {
       const email =
@@ -742,13 +1026,17 @@ export async function sendEbbc2026TicketEmailsForOrder(
           ?.trim()
           .toLowerCase();
 
-      if (!email) {
+      if (
+        !email
+      ) {
         throw new Error(
           `Ticket ${ticket.ticket_number} has no attendee email address.`,
         );
       }
 
-      if (!ticket.access_token) {
+      if (
+        !ticket.access_token
+      ) {
         throw new Error(
           `Ticket ${ticket.ticket_number} has no secure access token.`,
         );
@@ -762,14 +1050,33 @@ export async function sendEbbc2026TicketEmailsForOrder(
       deliveryId =
         delivery.deliveryId;
 
-      if (!delivery.shouldSend) {
-        result.skipped += 1;
+      if (
+        !delivery.shouldSend
+      ) {
+        result.skipped +=
+          1;
+
         continue;
       }
 
-      if (!deliveryId) {
-        result.skipped += 1;
+      if (
+        !deliveryId
+      ) {
+        result.skipped +=
+          1;
+
         continue;
+      }
+
+      if (
+        !ticket.event_date ||
+        !isEventDate(
+          ticket.event_date,
+        )
+      ) {
+        throw new Error(
+          `Ticket ${ticket.ticket_number} does not have a valid EBBC2026 event day.`,
+        );
       }
 
       const secureTicketUrl =
@@ -779,44 +1086,67 @@ export async function sendEbbc2026TicketEmailsForOrder(
         await QRCode.toBuffer(
           secureTicketUrl,
           {
-            type: "png",
-            errorCorrectionLevel: "H",
-            margin: 2,
-            width: 700,
+            type:
+              "png",
+
+            errorCorrectionLevel:
+              "H",
+
+            margin:
+              2,
+
+            width:
+              700,
 
             color: {
-              dark: "#0D1D34",
-              light: "#FFFFFF",
+              dark:
+                "#0D1D34",
+
+              light:
+                "#FFFFFF",
             },
           },
         );
 
       const message =
         await transporter.sendMail({
-          from: emailFrom,
-          to: email,
-          replyTo: smtpUser,
+          from:
+            emailFrom,
+
+          to:
+            email,
+
+          replyTo:
+            smtpUser,
 
           subject:
             `Your EBBC2026 Ticket — ${ticket.ticket_number}`,
 
-          text: createPlainTextEmail(
-            ticket,
-            secureTicketUrl,
-          ),
+          text:
+            createPlainTextEmail(
+              ticket,
+              secureTicketUrl,
+            ),
 
-          html: createHtmlEmail(
-            ticket,
-            secureTicketUrl,
-          ),
+          html:
+            createHtmlEmail(
+              ticket,
+              secureTicketUrl,
+            ),
 
           attachments: [
             {
               filename:
                 `${ticket.ticket_number}.png`,
-              content: qrCodeBuffer,
-              contentType: "image/png",
-              cid: "ebbc2026-ticket-qr",
+
+              content:
+                qrCodeBuffer,
+
+              contentType:
+                "image/png",
+
+              cid:
+                "ebbc2026-ticket-qr",
             },
           ],
         });
@@ -825,58 +1155,84 @@ export async function sendEbbc2026TicketEmailsForOrder(
         new Date().toISOString();
 
       const {
-        error: deliveryUpdateError,
-      } = await supabaseAdmin
-        .from(
-          "ebbc_ticket_deliveries",
-        )
-        .update({
-          provider_message_id:
-            message.messageId || null,
+        error:
+          deliveryUpdateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ebbc_ticket_deliveries",
+          )
+          .update({
+            provider_message_id:
+              message.messageId ||
+              null,
 
-          delivery_status: "sent",
+            delivery_status:
+              "sent",
 
-          failure_reason: null,
+            failure_reason:
+              null,
 
-          provider_response: {
-            accepted:
-              message.accepted || [],
-            rejected:
-              message.rejected || [],
-            pending:
-              message.pending || [],
-            response:
-              message.response || null,
-            envelope:
-              message.envelope || null,
-          },
+            provider_response: {
+              accepted:
+                message.accepted ||
+                [],
 
-          sent_at: sentAt,
-        })
-        .eq("id", deliveryId);
+              rejected:
+                message.rejected ||
+                [],
 
-      if (deliveryUpdateError) {
+              pending:
+                message.pending ||
+                [],
+
+              response:
+                message.response ||
+                null,
+
+              envelope:
+                message.envelope ||
+                null,
+            },
+
+            sent_at:
+              sentAt,
+          })
+          .eq(
+            "id",
+            deliveryId,
+          );
+
+      if (
+        deliveryUpdateError
+      ) {
         console.error(
           "Ticket email was sent but the delivery record could not be updated:",
           deliveryUpdateError,
         );
       }
 
-      result.sent += 1;
-    } catch (error) {
+      result.sent +=
+        1;
+    } catch (
+      error
+    ) {
       console.error(
         `EBBC2026 ticket email failed for ${ticket.ticket_number}:`,
         error,
       );
 
-      if (deliveryId) {
+      if (
+        deliveryId
+      ) {
         await markDeliveryFailed(
           deliveryId,
           error,
         );
       }
 
-      result.failed += 1;
+      result.failed +=
+        1;
     }
   }
 
