@@ -735,7 +735,7 @@ export default function EBBC2026TicketsPage() {
       ) {
         throw new Error(
           responseData.message ||
-            "Paystack checkout could not be started.",
+            "Payment instructions could not be opened.",
         );
       }
 
@@ -747,7 +747,7 @@ export default function EBBC2026TicketsPage() {
         !authorizationUrl
       ) {
         throw new Error(
-          "Paystack did not return a checkout link.",
+          "Payment instructions could not be opened.",
         );
       }
 
@@ -955,16 +955,11 @@ export default function EBBC2026TicketsPage() {
 
                   <div>
                     <h2 className="text-base font-extrabold">
-                      Secure Paystack
-                      Checkout
+                      Pay via Equity Paybill
                     </h2>
 
                     <p className="mt-2 text-xs leading-6 text-[#0D1D34]/60">
-                      Continue to
-                      Paystack to
-                      complete payment
-                      using an available
-                      payment method.
+                      Continue to the Equity Paybill instructions and complete payment using M-Pesa.
                     </p>
                   </div>
                 </div>
@@ -983,8 +978,7 @@ export default function EBBC2026TicketsPage() {
                 {isStartingPayment ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Opening Secure
-                    Checkout
+                    Opening Paybill Instructions
                   </>
                 ) : (
                   <>
@@ -1009,7 +1003,7 @@ export default function EBBC2026TicketsPage() {
 
                 <span className="inline-flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-[#CC8591]" />
-                  Card
+                  Equity Paybill
                 </span>
 
                 <span className="inline-flex items-center gap-2">
@@ -1803,7 +1797,7 @@ export default function EBBC2026TicketsPage() {
 
                   <span className="inline-flex items-center gap-2">
                     <CreditCard className="h-4 w-4 text-[#CC8591]" />
-                    Card
+                    Equity Paybill
                   </span>
                 </div>
               </div>
