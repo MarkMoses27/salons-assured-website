@@ -39,7 +39,9 @@ type SecureTicketPageProps = {
   }>;
 };
 
-function isValidUuid(value: string) {
+function isValidUuid(
+  value: string,
+) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
@@ -59,32 +61,69 @@ function formatIssuedDate(
       timeStyle: "short",
       timeZone: "Africa/Nairobi",
     },
-  ).format(new Date(value));
+  ).format(
+    new Date(value),
+  );
+}
+
+function formatEventDate(
+  value: string | null,
+) {
+  if (
+    value ===
+    "2026-11-17"
+  ) {
+    return "17 November 2026";
+  }
+
+  if (
+    value ===
+    "2026-11-18"
+  ) {
+    return "18 November 2026";
+  }
+
+  return "Event day unavailable";
 }
 
 export default async function SecureTicketPage({
   params,
 }: SecureTicketPageProps) {
-  const { token } = await params;
+  const {
+    token,
+  } = await params;
 
-  const accessToken = token.trim();
+  const accessToken =
+    token.trim();
 
-  if (!isValidUuid(accessToken)) {
+  if (
+    !isValidUuid(
+      accessToken,
+    )
+  ) {
     notFound();
   }
 
   const {
     data: ticketRecord,
     error: ticketError,
-  } = await supabaseAdmin
-    .from("ebbc_tickets")
-    .select(
-      "id, order_id, payment_id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, organisation, country, ticket_status, issued_at, access_token",
-    )
-    .eq("access_token", accessToken)
-    .maybeSingle();
+  } =
+    await supabaseAdmin
+      .from(
+        "ebbc_tickets",
+      )
+      .select(
+        "id, order_id, payment_id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, organisation, country, ticket_status, event_date, issued_at, access_token",
+      )
+      .eq(
+        "access_token",
+        accessToken,
+      )
+      .maybeSingle();
 
-  if (ticketError) {
+  if (
+    ticketError
+  ) {
     console.error(
       "EBBC2026 secure ticket lookup error:",
       ticketError,
@@ -95,22 +134,32 @@ export default async function SecureTicketPage({
     );
   }
 
-  if (!ticketRecord) {
+  if (
+    !ticketRecord
+  ) {
     notFound();
   }
 
   const {
     data: orderRecord,
     error: orderError,
-  } = await supabaseAdmin
-    .from("ebbc_orders")
-    .select(
-      "order_number, payment_status, order_status",
-    )
-    .eq("id", ticketRecord.order_id)
-    .maybeSingle();
+  } =
+    await supabaseAdmin
+      .from(
+        "ebbc_orders",
+      )
+      .select(
+        "order_number, payment_status, order_status",
+      )
+      .eq(
+        "id",
+        ticketRecord.order_id,
+      )
+      .maybeSingle();
 
-  if (orderError) {
+  if (
+    orderError
+  ) {
     console.error(
       "EBBC2026 ticket order lookup error:",
       orderError,
@@ -124,28 +173,38 @@ export default async function SecureTicketPage({
       "paid";
 
   const appUrl = (
-    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env
+      .NEXT_PUBLIC_APP_URL ||
     "https://www.salonsassured.com"
-  ).replace(/\/$/, "");
+  ).replace(
+    /\/$/,
+    "",
+  );
 
   const secureTicketUrl =
     `${appUrl}/ebbc2026/ticket/${accessToken}`;
 
-  const qrCodeDataUrl = ticketIsActive
-    ? await QRCode.toDataURL(
-        secureTicketUrl,
-        {
-          errorCorrectionLevel: "H",
-          margin: 2,
-          width: 700,
+  const qrCodeDataUrl =
+    ticketIsActive
+      ? await QRCode.toDataURL(
+          secureTicketUrl,
+          {
+            errorCorrectionLevel:
+              "H",
 
-          color: {
-            dark: "#0D1D34",
-            light: "#FFFFFF",
+            margin: 2,
+
+            width: 700,
+
+            color: {
+              dark:
+                "#0D1D34",
+              light:
+                "#FFFFFF",
+            },
           },
-        },
-      )
-    : null;
+        )
+      : null;
 
   return (
     <main className="min-h-screen bg-[#F7F5F5] px-5 pb-24 pt-36 text-[#0D1D34] sm:px-8">
@@ -172,9 +231,9 @@ export default async function SecureTicketPage({
                 </h1>
 
                 <p className="mt-5 max-w-xl text-[13px] leading-7 text-white/60">
-                  This secure ticket belongs to the
-                  named attendee and contains a unique
-                  verification QR code.
+                  This secure ticket belongs to the named
+                  attendee and is valid only for the
+                  selected event day shown below.
                 </p>
               </div>
 
@@ -212,7 +271,8 @@ export default async function SecureTicketPage({
 
                   <p className="mt-2 text-base font-black">
                     {
-                      ticketRecord.attendee_full_name
+                      ticketRecord
+                        .attendee_full_name
                     }
                   </p>
                 </div>
@@ -228,7 +288,8 @@ export default async function SecureTicketPage({
 
                   <p className="mt-2 break-all text-base font-black">
                     {
-                      ticketRecord.ticket_number
+                      ticketRecord
+                        .ticket_number
                     }
                   </p>
                 </div>
@@ -239,11 +300,17 @@ export default async function SecureTicketPage({
                   </div>
 
                   <p className="mt-5 text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#0D1D34]/40">
-                    Convention Dates
+                    Selected Event Day
                   </p>
 
                   <p className="mt-2 text-base font-black">
-                    17–18 November 2026
+                    {formatEventDate(
+                      ticketRecord.event_date,
+                    )}
+                  </p>
+
+                  <p className="mt-2 text-[10px] font-semibold leading-5 text-[#0D1D34]/45">
+                    Valid for this event day only.
                   </p>
                 </div>
 
@@ -280,7 +347,8 @@ export default async function SecureTicketPage({
 
                       <p className="mt-1 break-all text-xs font-bold">
                         {
-                          ticketRecord.attendee_email
+                          ticketRecord
+                            .attendee_email
                         }
                       </p>
                     </div>
@@ -296,7 +364,8 @@ export default async function SecureTicketPage({
 
                       <p className="mt-1 text-xs font-bold">
                         {
-                          ticketRecord.attendee_phone
+                          ticketRecord
+                            .attendee_phone
                         }
                       </p>
                     </div>
@@ -312,7 +381,8 @@ export default async function SecureTicketPage({
 
                       <p className="mt-1 text-xs font-bold">
                         {
-                          ticketRecord.participant_category
+                          ticketRecord
+                            .participant_category
                         }
                       </p>
                     </div>
@@ -349,6 +419,13 @@ export default async function SecureTicketPage({
                       {orderRecord?.order_number ||
                         "Not available"}
                       <br />
+
+                      Event day:{" "}
+                      {formatEventDate(
+                        ticketRecord.event_date,
+                      )}
+                      <br />
+
                       Issued:{" "}
                       {formatIssuedDate(
                         ticketRecord.issued_at,
@@ -365,7 +442,9 @@ export default async function SecureTicketPage({
                 <>
                   <div className="rounded-[26px] border border-[#0D1D34]/8 bg-white p-5 shadow-sm">
                     <Image
-                      src={qrCodeDataUrl}
+                      src={
+                        qrCodeDataUrl
+                      }
                       alt={`QR code for ticket ${ticketRecord.ticket_number}`}
                       width={700}
                       height={700}
@@ -381,9 +460,10 @@ export default async function SecureTicketPage({
                   </p>
 
                   <p className="mt-2 text-center text-[10px] leading-5 text-[#0D1D34]/45">
-                    Keep this ticket private. Its QR
-                    code uniquely identifies the
-                    attendee’s registration.
+                    Keep this ticket private. Its QR code
+                    uniquely identifies the attendee’s
+                    registration for the selected event
+                    day.
                   </p>
                 </>
               ) : (
@@ -396,8 +476,8 @@ export default async function SecureTicketPage({
 
                   <p className="mt-2 text-[11px] leading-5 text-red-900/65">
                     This ticket cannot display a
-                    verification QR code until its
-                    payment is confirmed.
+                    verification QR code until its payment
+                    is confirmed.
                   </p>
                 </div>
               )}
