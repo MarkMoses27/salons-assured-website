@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import {
-  FormEvent,
-  useState,
-} from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
 import {
   ArrowLeft,
   Eye,
@@ -15,7 +13,6 @@ import {
   Mail,
   ShieldCheck,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -31,19 +28,28 @@ type RecoveryState =
   | "sent"
   | "error";
 
+type RecoveryResponse = {
+  ok?: boolean;
+  message?: string;
+};
+
+type SessionResponse = {
+  ok?: boolean;
+  authorized?: boolean;
+  message?: string;
+  staff?: {
+    displayName?: string;
+    role?: string;
+  };
+};
+
 export default function EbbcScannerLoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] =
-    useState("");
-
-  const [password, setPassword] =
-    useState("");
-
-  const [
-    showPassword,
-    setShowPassword,
-  ] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] =
+    useState(false);
 
   const [status, setStatus] =
     useState<LoginState>("idle");
@@ -51,16 +57,17 @@ export default function EbbcScannerLoginPage() {
   const [message, setMessage] =
     useState("");
 
-  const [
-    recoveryState,
-    setRecoveryState,
-  ] =
+  const [recoveryState, setRecoveryState] =
     useState<RecoveryState>("idle");
 
-  const [
-    recoveryMessage,
-    setRecoveryMessage,
-  ] = useState("");
+  const [recoveryMessage, setRecoveryMessage] =
+    useState("");
+
+  const isLoading =
+    status === "loading";
+
+  const isSendingRecovery =
+    recoveryState === "sending";
 
   async function handleLogin(
     event: FormEvent<HTMLFormElement>,
@@ -72,16 +79,15 @@ export default function EbbcScannerLoginPage() {
 
     if (!cleanEmail || !password) {
       setStatus("error");
-
       setMessage(
         "Enter your email and password.",
       );
-
       return;
     }
 
     setStatus("loading");
     setMessage("");
+    setRecoveryMessage("");
 
     try {
       const supabase =
@@ -91,52 +97,37 @@ export default function EbbcScannerLoginPage() {
         data,
         error,
       } =
-        await supabase.auth.signInWithPassword(
-          {
-            email: cleanEmail,
-            password,
-          },
-        );
+        await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
 
       if (
         error ||
         !data.session?.access_token
       ) {
         setStatus("error");
-
         setMessage(
           "Incorrect email or password.",
         );
-
         return;
       }
 
-      const response =
-        await fetch(
-          "/api/ebbc2026/scanner/session",
-          {
-            method: "GET",
-
-            headers: {
-              Authorization:
-                `Bearer ${data.session.access_token}`,
-            },
-
-            cache: "no-store",
+      const response = await fetch(
+        "/api/ebbc2026/scanner/session",
+        {
+          method: "GET",
+          headers: {
+            Authorization:
+              `Bearer ${data.session.access_token}`,
           },
-        );
+          cache: "no-store",
+        },
+      );
 
       const result =
-        (await response.json()) as {
-          ok?: boolean;
-          authorized?: boolean;
-          message?: string;
-
-          staff?: {
-            displayName?: string;
-            role?: string;
-          };
-        };
+        (await response.json()) as
+          SessionResponse;
 
       if (
         !response.ok ||
@@ -168,7 +159,7 @@ export default function EbbcScannerLoginPage() {
         router.replace(
           "/ebbc2026/scanner",
         );
-      }, 700);
+      }, 600);
     } catch (error) {
       console.error(
         "EBBC2026 scanner login error:",
@@ -188,9 +179,7 @@ export default function EbbcScannerLoginPage() {
       email.trim().toLowerCase();
 
     if (!cleanEmail) {
-      setRecoveryState(
-        "error",
-      );
+      setRecoveryState("error");
 
       setRecoveryMessage(
         "Enter your scanner email first.",
@@ -199,48 +188,49 @@ export default function EbbcScannerLoginPage() {
       return;
     }
 
-    setRecoveryState(
-      "sending",
-    );
-
+    setRecoveryState("sending");
     setRecoveryMessage("");
+    setMessage("");
 
     try {
-      const supabase =
-        getSupabaseBrowserClient();
-
-      const redirectTo =
-        `${window.location.origin}/ebbc2026/scanner/reset-password`;
-
-      const {
-        error,
-      } =
-        await supabase.auth.resetPasswordForEmail(
-          cleanEmail,
-          {
-            redirectTo,
+      const response = await fetch(
+        "/api/ebbc2026/scanner/forgot-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
           },
-        );
+          body: JSON.stringify({
+            email: cleanEmail,
+          }),
+          cache: "no-store",
+        },
+      );
 
-      if (error) {
-        setRecoveryState(
-          "error",
-        );
+      const result =
+        (await response.json()) as
+          RecoveryResponse;
+
+      if (
+        !response.ok ||
+        !result.ok
+      ) {
+        setRecoveryState("error");
 
         setRecoveryMessage(
-          error.message ||
-            "The reset email could not be sent.",
+          result.message ||
+            "The password reset email could not be sent.",
         );
 
         return;
       }
 
-      setRecoveryState(
-        "sent",
-      );
+      setRecoveryState("sent");
 
       setRecoveryMessage(
-        "Password reset email sent. Check your inbox.",
+        result.message ||
+          "Password reset email sent. Check your inbox.",
       );
     } catch (error) {
       console.error(
@@ -248,22 +238,13 @@ export default function EbbcScannerLoginPage() {
         error,
       );
 
-      setRecoveryState(
-        "error",
-      );
+      setRecoveryState("error");
 
       setRecoveryMessage(
-        "The reset email could not be sent.",
+        "The password reset email could not be sent.",
       );
     }
   }
-
-  const isLoading =
-    status === "loading";
-
-  const isSendingRecovery =
-    recoveryState ===
-    "sending";
 
   return (
     <main className="min-h-screen bg-[#F6F4F4] px-5 pb-16 pt-32 text-[#0D1D34] sm:px-8">
@@ -340,22 +321,18 @@ export default function EbbcScannerLoginPage() {
                       type="email"
                       autoComplete="email"
                       value={email}
-                      disabled={
-                        isLoading
-                      }
+                      disabled={isLoading}
                       onChange={(event) => {
                         setEmail(
                           event.target.value,
                         );
 
                         if (
-                          recoveryState !==
-                          "idle"
+                          recoveryState !== "idle"
                         ) {
                           setRecoveryState(
                             "idle",
                           );
-
                           setRecoveryMessage(
                             "",
                           );
@@ -381,9 +358,10 @@ export default function EbbcScannerLoginPage() {
                           void handleForgotPassword()
                         }
                         disabled={
-                          isSendingRecovery
+                          isSendingRecovery ||
+                          isLoading
                         }
-                        className="text-[10px] font-extrabold text-[#CC8591] transition hover:text-[#B96F7C] disabled:opacity-50"
+                        className="text-[10px] font-extrabold text-[#CC8591] transition hover:text-[#B96F7C] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isSendingRecovery
                           ? "Sending..."
@@ -401,9 +379,7 @@ export default function EbbcScannerLoginPage() {
                         }
                         autoComplete="current-password"
                         value={password}
-                        disabled={
-                          isLoading
-                        }
+                        disabled={isLoading}
                         onChange={(event) =>
                           setPassword(
                             event.target.value,
@@ -440,8 +416,7 @@ export default function EbbcScannerLoginPage() {
                   {recoveryMessage ? (
                     <div
                       className={`flex items-start gap-2 rounded-[14px] border px-4 py-3 text-xs font-semibold leading-5 ${
-                        recoveryState ===
-                        "sent"
+                        recoveryState === "sent"
                           ? "border-blue-200 bg-blue-50 text-blue-800"
                           : "border-red-200 bg-red-50 text-red-800"
                       }`}
@@ -449,9 +424,7 @@ export default function EbbcScannerLoginPage() {
                       <Mail className="mt-0.5 h-4 w-4 shrink-0" />
 
                       <span>
-                        {
-                          recoveryMessage
-                        }
+                        {recoveryMessage}
                       </span>
                     </div>
                   ) : null}
@@ -459,8 +432,7 @@ export default function EbbcScannerLoginPage() {
                   {message ? (
                     <div
                       className={`rounded-[14px] border px-4 py-3 text-xs font-semibold ${
-                        status ===
-                        "success"
+                        status === "success"
                           ? "border-green-200 bg-green-50 text-green-800"
                           : "border-red-200 bg-red-50 text-red-800"
                       }`}
@@ -473,8 +445,7 @@ export default function EbbcScannerLoginPage() {
                     type="submit"
                     disabled={
                       isLoading ||
-                      status ===
-                        "success"
+                      status === "success"
                     }
                     className="flex h-14 w-full items-center justify-center gap-2 rounded-[15px] bg-[#0D1D34] text-sm font-extrabold text-white transition hover:bg-[#172D4B] disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -483,8 +454,7 @@ export default function EbbcScannerLoginPage() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Signing in...
                       </>
-                    ) : status ===
-                      "success" ? (
+                    ) : status === "success" ? (
                       <>
                         <ShieldCheck className="h-4 w-4" />
                         Opening Scanner...

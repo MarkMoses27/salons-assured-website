@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
-  Check,
   CheckCircle2,
   CreditCard,
   Loader2,
@@ -18,6 +17,7 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
+
 import {
   useMemo,
   useState,
@@ -28,6 +28,22 @@ import { EBBC2026 } from "@/lib/ebbc2026/config";
 
 const participantCategories =
   EBBC2026.participantCategories;
+
+const EVENT_DAYS = [
+  {
+    value: "2026-11-17",
+    shortLabel: "Day 1",
+    label: "17 November 2026",
+  },
+  {
+    value: "2026-11-18",
+    shortLabel: "Day 2",
+    label: "18 November 2026",
+  },
+] as const;
+
+type EventDate =
+  (typeof EVENT_DAYS)[number]["value"];
 
 type BuyerDetails = {
   fullName: string;
@@ -45,11 +61,13 @@ type AttendeeDetails = {
   category: string;
   organisation: string;
   country: string;
+  eventDate: EventDate | "";
 };
 
 type CreatedTicket = {
   ticketNumber: string;
   attendeeName: string;
+  eventDate: string;
   status: string;
 };
 
@@ -107,6 +125,9 @@ type CreateOrderResponse = {
     attendeeName?: string;
     attendee_name?: string;
 
+    eventDate?: string;
+    event_date?: string;
+
     status?: string;
     ticketStatus?: string;
     ticket_status?: string;
@@ -118,34 +139,56 @@ type InitializePaymentResponse = {
   message?: string;
   authorizationUrl?: string;
   authorization_url?: string;
-  reference?: string;
-  orderNumber?: string;
-  amountKes?: number;
-  currency?: string;
 };
 
-const createBlankAttendee =
-  (): AttendeeDetails => ({
+function createBlankAttendee(): AttendeeDetails {
+  return {
     fullName: "",
     email: "",
     phone: "",
     category: "",
     organisation: "",
     country: "Kenya",
-  });
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat("en-KE").format(
-    amount,
-  );
+    eventDate: "",
+  };
 }
 
-function cleanText(value: unknown) {
-  if (typeof value !== "string") {
+function cleanText(
+  value: unknown,
+) {
+  if (
+    typeof value !== "string"
+  ) {
     return "";
   }
 
   return value.trim();
+}
+
+function formatMoney(
+  amount: number,
+) {
+  return new Intl.NumberFormat(
+    "en-KE",
+  ).format(amount);
+}
+
+function formatTicketDate(
+  value: string,
+) {
+  if (
+    value === "2026-11-17"
+  ) {
+    return "17 November 2026";
+  }
+
+  if (
+    value === "2026-11-18"
+  ) {
+    return "18 November 2026";
+  }
+
+  return value;
 }
 
 function normaliseCreatedOrder(
@@ -153,77 +196,101 @@ function normaliseCreatedOrder(
   fallbackQuantity: number,
   fallbackTotal: number,
 ): CreatedOrder | null {
-  const order = response.order;
+  const order =
+    response.order;
 
-  const orderNumber = cleanText(
-    order?.orderNumber ||
-      order?.order_number ||
-      response.orderNumber,
-  );
+  const orderNumber =
+    cleanText(
+      order?.orderNumber ||
+        order?.order_number ||
+        response.orderNumber,
+    );
 
   if (!orderNumber) {
     return null;
   }
 
-  const quantity = Number(
-    order?.quantity ??
-      order?.ticketQuantity ??
-      order?.ticket_quantity ??
-      response.quantity ??
-      response.ticketQuantity ??
-      fallbackQuantity,
-  );
+  const quantity =
+    Number(
+      order?.quantity ??
+        order?.ticketQuantity ??
+        order?.ticket_quantity ??
+        response.quantity ??
+        response.ticketQuantity ??
+        fallbackQuantity,
+    );
 
-  const unitPriceKes = Number(
-    order?.unitPriceKes ??
-      order?.unit_price_kes ??
-      response.unitPriceKes ??
-      EBBC2026.ticket.priceKes,
-  );
+  const unitPriceKes =
+    Number(
+      order?.unitPriceKes ??
+        order?.unit_price_kes ??
+        response.unitPriceKes ??
+        EBBC2026.ticket.priceKes,
+    );
 
-  const totalAmountKes = Number(
-    order?.totalAmountKes ??
-      order?.total_amount_kes ??
-      response.totalAmountKes ??
-      fallbackTotal,
-  );
+  const totalAmountKes =
+    Number(
+      order?.totalAmountKes ??
+        order?.total_amount_kes ??
+        response.totalAmountKes ??
+        fallbackTotal,
+    );
 
-  const tickets: CreatedTicket[] = (
-    response.tickets || []
-  ).map((ticket) => ({
-    ticketNumber: cleanText(
-      ticket.ticketNumber ||
-        ticket.ticket_number,
-    ),
+  const tickets:
+    CreatedTicket[] =
+    (
+      response.tickets || []
+    ).map((ticket) => ({
+      ticketNumber:
+        cleanText(
+          ticket.ticketNumber ||
+            ticket.ticket_number,
+        ),
 
-    attendeeName: cleanText(
-      ticket.attendeeName ||
-        ticket.attendee_name,
-    ),
+      attendeeName:
+        cleanText(
+          ticket.attendeeName ||
+            ticket.attendee_name,
+        ),
 
-    status: cleanText(
-      ticket.status ||
-        ticket.ticketStatus ||
-        ticket.ticket_status ||
-        "pending",
-    ),
-  }));
+      eventDate:
+        cleanText(
+          ticket.eventDate ||
+            ticket.event_date,
+        ),
+
+      status:
+        cleanText(
+          ticket.status ||
+            ticket.ticketStatus ||
+            ticket.ticket_status ||
+            "pending",
+        ),
+    }));
 
   return {
     orderNumber,
+
     quantity:
-      Number.isFinite(quantity) && quantity > 0
+      Number.isFinite(
+        quantity,
+      ) && quantity > 0
         ? quantity
         : fallbackQuantity,
 
     unitPriceKes:
-      Number.isFinite(unitPriceKes) &&
+      Number.isFinite(
+        unitPriceKes,
+      ) &&
       unitPriceKes > 0
         ? unitPriceKes
-        : EBBC2026.ticket.priceKes,
+        : EBBC2026.ticket
+            .priceKes,
 
     totalAmountKes:
-      Number.isFinite(totalAmountKes) &&
+      Number.isFinite(
+        totalAmountKes,
+      ) &&
       totalAmountKes > 0
         ? totalAmountKes
         : fallbackTotal,
@@ -235,19 +302,21 @@ function normaliseCreatedOrder(
           "KES",
       ).toUpperCase(),
 
-    orderStatus: cleanText(
-      order?.orderStatus ||
-        order?.order_status ||
-        response.orderStatus ||
-        "pending",
-    ),
+    orderStatus:
+      cleanText(
+        order?.orderStatus ||
+          order?.order_status ||
+          response.orderStatus ||
+          "pending",
+      ),
 
-    paymentStatus: cleanText(
-      order?.paymentStatus ||
-        order?.payment_status ||
-        response.paymentStatus ||
-        "pending",
-    ),
+    paymentStatus:
+      cleanText(
+        order?.paymentStatus ||
+          order?.payment_status ||
+          response.paymentStatus ||
+          "pending",
+      ),
 
     tickets,
   };
@@ -264,105 +333,175 @@ export default function EBBC2026TicketsPage() {
       referralCode: "",
     });
 
-  const [attendees, setAttendees] = useState<
+  const [
+    attendees,
+    setAttendees,
+  ] = useState<
     AttendeeDetails[]
-  >([createBlankAttendee()]);
+  >([
+    createBlankAttendee(),
+  ]);
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
-  const [isStartingPayment, setIsStartingPayment] =
-    useState(false);
+  const [
+    isStartingPayment,
+    setIsStartingPayment,
+  ] = useState(false);
 
-  const [formError, setFormError] = useState("");
-  const [paymentError, setPaymentError] =
-    useState("");
+  const [
+    formError,
+    setFormError,
+  ] = useState("");
 
-  const [createdOrder, setCreatedOrder] =
-    useState<CreatedOrder | null>(null);
+  const [
+    paymentError,
+    setPaymentError,
+  ] = useState("");
 
-  const quantity = attendees.length;
-
-  const totalAmount = useMemo(
-    () =>
-      quantity *
-      EBBC2026.ticket.priceKes,
-    [quantity],
-  );
-
-  const formattedTotal =
-    formatMoney(totalAmount);
-
-  const updateBuyer = (
-    field: keyof BuyerDetails,
-    value: string,
-  ) => {
-    setBuyer((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
-
-  const updateAttendee = (
-    index: number,
-    field: keyof AttendeeDetails,
-    value: string,
-  ) => {
-    setAttendees((current) =>
-      current.map((attendee, attendeeIndex) =>
-        attendeeIndex === index
-          ? {
-              ...attendee,
-              [field]: value,
-            }
-          : attendee,
-      ),
+  const [
+    createdOrder,
+    setCreatedOrder,
+  ] =
+    useState<CreatedOrder | null>(
+      null,
     );
-  };
 
-  const increaseQuantity = () => {
-    if (attendees.length >= 10) {
+  const quantity =
+    attendees.length;
+
+  const totalAmount =
+    useMemo(
+      () =>
+        quantity *
+        EBBC2026.ticket
+          .priceKes,
+      [quantity],
+    );
+
+  const dayOneCount =
+    attendees.filter(
+      (attendee) =>
+        attendee.eventDate ===
+        "2026-11-17",
+    ).length;
+
+  const dayTwoCount =
+    attendees.filter(
+      (attendee) =>
+        attendee.eventDate ===
+        "2026-11-18",
+    ).length;
+
+  function updateBuyer(
+    field:
+      keyof BuyerDetails,
+    value: string,
+  ) {
+    setBuyer(
+      (current) => ({
+        ...current,
+        [field]: value,
+      }),
+    );
+  }
+
+  function updateAttendee(
+    index: number,
+    field:
+      keyof AttendeeDetails,
+    value: string,
+  ) {
+    setAttendees(
+      (current) =>
+        current.map(
+          (
+            attendee,
+            attendeeIndex,
+          ) =>
+            attendeeIndex ===
+            index
+              ? {
+                  ...attendee,
+                  [field]:
+                    value,
+                }
+              : attendee,
+        ),
+    );
+  }
+
+  function increaseQuantity() {
+    if (
+      attendees.length >= 10
+    ) {
       return;
     }
 
-    setAttendees((current) => [
-      ...current,
-      createBlankAttendee(),
-    ]);
-  };
+    setAttendees(
+      (current) => [
+        ...current,
+        createBlankAttendee(),
+      ],
+    );
+  }
 
-  const decreaseQuantity = () => {
-    if (attendees.length <= 1) {
+  function decreaseQuantity() {
+    if (
+      attendees.length <= 1
+    ) {
       return;
     }
 
-    setAttendees((current) =>
-      current.slice(0, -1),
+    setAttendees(
+      (current) =>
+        current.slice(
+          0,
+          -1,
+        ),
     );
-  };
+  }
 
-  const copyBuyerToAttendee = (
+  function copyBuyerToAttendee(
     index: number,
-  ) => {
-    setAttendees((current) =>
-      current.map((attendee, attendeeIndex) =>
-        attendeeIndex === index
-          ? {
-              ...attendee,
-              fullName: buyer.fullName,
-              email: buyer.email,
-              phone: buyer.phone,
-              country:
-                buyer.country || "Kenya",
-              organisation:
-                buyer.organisation,
-            }
-          : attendee,
-      ),
-    );
-  };
+  ) {
+    setAttendees(
+      (current) =>
+        current.map(
+          (
+            attendee,
+            attendeeIndex,
+          ) =>
+            attendeeIndex ===
+            index
+              ? {
+                  ...attendee,
 
-  const validateForm = () => {
+                  fullName:
+                    buyer.fullName,
+
+                  email:
+                    buyer.email,
+
+                  phone:
+                    buyer.phone,
+
+                  country:
+                    buyer.country ||
+                    "Kenya",
+
+                  organisation:
+                    buyer.organisation,
+                }
+              : attendee,
+        ),
+    );
+  }
+
+  function validateForm() {
     if (
       !buyer.fullName.trim() ||
       !buyer.email.trim() ||
@@ -372,26 +511,43 @@ export default function EBBC2026TicketsPage() {
       return "Complete all required buyer details.";
     }
 
-    const incompleteAttendee =
-      attendees.find(
-        (attendee) =>
-          !attendee.fullName.trim() ||
-          !attendee.email.trim() ||
-          !attendee.phone.trim() ||
-          !attendee.category.trim() ||
-          !attendee.country.trim(),
-      );
+    for (
+      let index = 0;
+      index <
+      attendees.length;
+      index += 1
+    ) {
+      const attendee =
+        attendees[index];
 
-    if (incompleteAttendee) {
-      return "Complete all required attendee details.";
+      if (
+        !attendee.eventDate
+      ) {
+        return `Select an event day for Ticket ${
+          index + 1
+        }.`;
+      }
+
+      if (
+        !attendee.fullName.trim() ||
+        !attendee.email.trim() ||
+        !attendee.phone.trim() ||
+        !attendee.category.trim() ||
+        !attendee.country.trim()
+      ) {
+        return `Complete all required details for Ticket ${
+          index + 1
+        }.`;
+      }
     }
 
     return "";
-  };
+  }
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
+  async function handleSubmit(
+    event:
+      FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     setFormError("");
@@ -400,8 +556,12 @@ export default function EBBC2026TicketsPage() {
     const validationMessage =
       validateForm();
 
-    if (validationMessage) {
-      setFormError(validationMessage);
+    if (
+      validationMessage
+    ) {
+      setFormError(
+        validationMessage,
+      );
 
       window.scrollTo({
         top: 0,
@@ -414,72 +574,82 @@ export default function EBBC2026TicketsPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(
-        "/api/ebbc2026/orders",
-        {
-          method: "POST",
+      const response =
+        await fetch(
+          "/api/ebbc2026/orders",
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify({
-            buyerFullName:
-              buyer.fullName.trim(),
+            body:
+              JSON.stringify({
+                buyerFullName:
+                  buyer.fullName.trim(),
 
-            buyerEmail:
-              buyer.email
-                .trim()
-                .toLowerCase(),
-
-            buyerPhone:
-              buyer.phone.trim(),
-
-            country:
-              buyer.country.trim(),
-
-            organisation:
-              buyer.organisation.trim(),
-
-            referralCode:
-              buyer.referralCode
-                .trim()
-                .toUpperCase(),
-
-            attendees: attendees.map(
-              (attendee) => ({
-                fullName:
-                  attendee.fullName.trim(),
-
-                email:
-                  attendee.email
+                buyerEmail:
+                  buyer.email
                     .trim()
                     .toLowerCase(),
 
-                phone:
-                  attendee.phone.trim(),
-
-                category:
-                  attendee.category.trim(),
-
-                organisation:
-                  attendee.organisation.trim(),
+                buyerPhone:
+                  buyer.phone.trim(),
 
                 country:
-                  attendee.country.trim(),
+                  buyer.country.trim(),
+
+                organisation:
+                  buyer.organisation.trim(),
+
+                referralCode:
+                  buyer.referralCode
+                    .trim()
+                    .toUpperCase(),
+
+                attendees:
+                  attendees.map(
+                    (
+                      attendee,
+                    ) => ({
+                      fullName:
+                        attendee.fullName.trim(),
+
+                      email:
+                        attendee.email
+                          .trim()
+                          .toLowerCase(),
+
+                      phone:
+                        attendee.phone.trim(),
+
+                      category:
+                        attendee.category.trim(),
+
+                      organisation:
+                        attendee.organisation.trim(),
+
+                      country:
+                        attendee.country.trim(),
+
+                      eventDate:
+                        attendee.eventDate,
+                    }),
+                  ),
               }),
-            ),
-          }),
-        },
-      );
+          },
+        );
 
       const responseData =
-        (await response.json()) as CreateOrderResponse;
+        (await response.json()) as
+          CreateOrderResponse;
 
       if (
         !response.ok ||
-        responseData.ok === false
+        responseData.ok ===
+          false
       ) {
         throw new Error(
           responseData.message ||
@@ -500,7 +670,9 @@ export default function EBBC2026TicketsPage() {
         );
       }
 
-      setCreatedOrder(order);
+      setCreatedOrder(
+        order,
+      );
 
       window.scrollTo({
         top: 0,
@@ -520,40 +692,46 @@ export default function EBBC2026TicketsPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const startPaystackPayment = async () => {
+  async function startPaystackPayment() {
     if (!createdOrder) {
       return;
     }
 
     setPaymentError("");
-    setIsStartingPayment(true);
+    setIsStartingPayment(
+      true,
+    );
 
     try {
-      const response = await fetch(
-        "/api/ebbc2026/paystack/initialize",
-        {
-          method: "POST",
+      const response =
+        await fetch(
+          "/api/ebbc2026/paystack/initialize",
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                orderNumber:
+                  createdOrder.orderNumber,
+              }),
           },
-
-          body: JSON.stringify({
-            orderNumber:
-              createdOrder.orderNumber,
-          }),
-        },
-      );
+        );
 
       const responseData =
-        (await response.json()) as InitializePaymentResponse;
+        (await response.json()) as
+          InitializePaymentResponse;
 
       if (
         !response.ok ||
-        responseData.ok === false
+        responseData.ok ===
+          false
       ) {
         throw new Error(
           responseData.message ||
@@ -565,7 +743,9 @@ export default function EBBC2026TicketsPage() {
         responseData.authorizationUrl ||
         responseData.authorization_url;
 
-      if (!authorizationUrl) {
+      if (
+        !authorizationUrl
+      ) {
         throw new Error(
           "Paystack did not return a checkout link.",
         );
@@ -580,11 +760,13 @@ export default function EBBC2026TicketsPage() {
           : "An unexpected payment error occurred.",
       );
 
-      setIsStartingPayment(false);
+      setIsStartingPayment(
+        false,
+      );
     }
-  };
+  }
 
-  const resetRegistration = () => {
+  function resetRegistration() {
     setBuyer({
       fullName: "",
       email: "",
@@ -602,24 +784,28 @@ export default function EBBC2026TicketsPage() {
     setFormError("");
     setPaymentError("");
     setIsSubmitting(false);
-    setIsStartingPayment(false);
+    setIsStartingPayment(
+      false,
+    );
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
-  };
+  }
 
   if (createdOrder) {
     return (
       <main className="min-h-screen bg-[#F7F5F5] px-5 pb-24 pt-36 text-[#0D1D34] sm:px-8">
         <section className="mx-auto max-w-[900px]">
           <Link
-            href={EBBC2026.routes.home}
+            href={
+              EBBC2026.routes
+                .home
+            }
             className="inline-flex items-center gap-2 text-xs font-extrabold text-[#0D1D34]/55 transition hover:text-[#CC8591]"
           >
             <ArrowLeft className="h-4 w-4" />
-
             Back to EBBC2026
           </Link>
 
@@ -638,9 +824,11 @@ export default function EBBC2026TicketsPage() {
               </h1>
 
               <p className="mx-auto mt-6 max-w-xl text-[13px] leading-7 text-white/65">
-                Your registration details have been
-                securely recorded. Complete the
-                Paystack payment to activate your
+                Your selected event
+                day and attendee
+                details are saved.
+                Complete payment to
+                activate the
                 EBBC2026 ticket.
               </p>
             </div>
@@ -653,17 +841,21 @@ export default function EBBC2026TicketsPage() {
                   </p>
 
                   <p className="mt-3 break-all text-sm font-black">
-                    {createdOrder.orderNumber}
+                    {
+                      createdOrder.orderNumber
+                    }
                   </p>
                 </div>
 
                 <div className="rounded-[19px] border border-[#0D1D34]/8 bg-[#FAFAFA] p-5">
                   <p className="text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#0D1D34]/40">
-                    Number of Tickets
+                    Tickets
                   </p>
 
                   <p className="mt-3 text-2xl font-black">
-                    {createdOrder.quantity}
+                    {
+                      createdOrder.quantity
+                    }
                   </p>
                 </div>
 
@@ -673,7 +865,9 @@ export default function EBBC2026TicketsPage() {
                   </p>
 
                   <p className="mt-3 text-xl font-black text-[#CC8591]">
-                    {createdOrder.currency}{" "}
+                    {
+                      createdOrder.currency
+                    }{" "}
                     {formatMoney(
                       createdOrder.totalAmountKes,
                     )}
@@ -681,38 +875,54 @@ export default function EBBC2026TicketsPage() {
                 </div>
               </div>
 
-              {createdOrder.tickets.length >
-                0 && (
+              {createdOrder
+                .tickets
+                .length > 0 ? (
                 <div className="mt-6 rounded-[22px] border border-[#0D1D34]/8 bg-[#FAFAFA] p-6">
                   <h2 className="flex items-center gap-3 text-sm font-extrabold">
                     <Ticket className="h-5 w-5 text-[#CC8591]" />
-
                     Tickets Prepared
                   </h2>
 
                   <div className="mt-5 space-y-3">
                     {createdOrder.tickets.map(
-                      (ticket, index) => (
+                      (
+                        ticket,
+                        index,
+                      ) => (
                         <div
                           key={
                             ticket.ticketNumber ||
                             `${ticket.attendeeName}-${index}`
                           }
-                          className="flex flex-col justify-between gap-2 rounded-[15px] border border-[#0D1D34]/8 bg-white p-4 sm:flex-row sm:items-center"
+                          className="flex flex-col justify-between gap-3 rounded-[15px] border border-[#0D1D34]/8 bg-white p-4 sm:flex-row sm:items-center"
                         >
                           <div>
                             <p className="text-sm font-extrabold">
                               {ticket.attendeeName ||
-                                `Attendee ${index + 1}`}
+                                `Attendee ${
+                                  index +
+                                  1
+                                }`}
                             </p>
 
-                            {ticket.ticketNumber && (
-                              <p className="mt-1 text-[10px] text-[#0D1D34]/45">
-                                {
-                                  ticket.ticketNumber
-                                }
-                              </p>
-                            )}
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {ticket.eventDate ? (
+                                <span className="rounded-full bg-[#0D1D34]/7 px-3 py-1 text-[9px] font-extrabold text-[#0D1D34]">
+                                  {formatTicketDate(
+                                    ticket.eventDate,
+                                  )}
+                                </span>
+                              ) : null}
+
+                              {ticket.ticketNumber ? (
+                                <span className="rounded-full bg-[#CC8591]/10 px-3 py-1 text-[9px] font-extrabold text-[#CC8591]">
+                                  {
+                                    ticket.ticketNumber
+                                  }
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
 
                           <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-amber-800">
@@ -723,17 +933,19 @@ export default function EBBC2026TicketsPage() {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {paymentError && (
+              {paymentError ? (
                 <div className="mt-6 flex items-start gap-3 rounded-[18px] border border-red-200 bg-red-50 p-5 text-red-900">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
 
                   <p className="text-xs leading-6">
-                    {paymentError}
+                    {
+                      paymentError
+                    }
                   </p>
                 </div>
-              )}
+              ) : null}
 
               <div className="mt-7 rounded-[22px] border border-[#CC8591]/25 bg-[#CC8591]/8 p-6">
                 <div className="flex items-start gap-4">
@@ -743,14 +955,16 @@ export default function EBBC2026TicketsPage() {
 
                   <div>
                     <h2 className="text-base font-extrabold">
-                      Secure Paystack Checkout
+                      Secure Paystack
+                      Checkout
                     </h2>
 
                     <p className="mt-2 text-xs leading-6 text-[#0D1D34]/60">
-                      Continue to the secure payment
-                      page and complete the test
-                      transaction using M-Pesa or a
-                      supported card.
+                      Continue to
+                      Paystack to
+                      complete payment
+                      using an available
+                      payment method.
                     </p>
                   </div>
                 </div>
@@ -758,20 +972,26 @@ export default function EBBC2026TicketsPage() {
 
               <button
                 type="button"
-                onClick={startPaystackPayment}
-                disabled={isStartingPayment}
+                onClick={
+                  startPaystackPayment
+                }
+                disabled={
+                  isStartingPayment
+                }
                 className="group mt-7 inline-flex h-[56px] w-full items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white shadow-[0_16px_35px_rgba(204,133,145,0.25)] transition hover:-translate-y-0.5 hover:bg-[#0D1D34] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
               >
                 {isStartingPayment ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-
-                    Opening Secure Checkout
+                    Opening Secure
+                    Checkout
                   </>
                 ) : (
                   <>
                     Pay{" "}
-                    {createdOrder.currency}{" "}
+                    {
+                      createdOrder.currency
+                    }{" "}
                     {formatMoney(
                       createdOrder.totalAmountKes,
                     )}
@@ -784,28 +1004,29 @@ export default function EBBC2026TicketsPage() {
               <div className="mt-4 flex items-center justify-center gap-5 text-[10px] font-bold text-[#0D1D34]/45">
                 <span className="inline-flex items-center gap-2">
                   <Smartphone className="h-4 w-4 text-[#CC8591]" />
-
                   M-Pesa
                 </span>
 
                 <span className="inline-flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-[#CC8591]" />
-
                   Card
                 </span>
 
                 <span className="inline-flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-[#CC8591]" />
-
-                  Verified
+                  Secure
                 </span>
               </div>
 
               <button
                 type="button"
-                onClick={resetRegistration}
-                disabled={isStartingPayment}
-                className="mt-7 inline-flex h-[52px] w-full items-center justify-center rounded-full border border-[#0D1D34]/15 bg-white px-7 text-sm font-extrabold transition hover:bg-[#0D1D34] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={
+                  resetRegistration
+                }
+                disabled={
+                  isStartingPayment
+                }
+                className="mt-7 inline-flex h-[52px] w-full items-center justify-center rounded-full border border-[#0D1D34]/15 bg-white px-7 text-sm font-extrabold transition hover:bg-[#0D1D34] hover:text-white disabled:opacity-50"
               >
                 Start Another Registration
               </button>
@@ -821,15 +1042,17 @@ export default function EBBC2026TicketsPage() {
       <section className="px-5 sm:px-8">
         <div className="mx-auto max-w-[1280px]">
           <Link
-            href={EBBC2026.routes.home}
+            href={
+              EBBC2026.routes
+                .home
+            }
             className="inline-flex items-center gap-2 text-xs font-extrabold text-[#0D1D34]/55 transition hover:text-[#CC8591]"
           >
             <ArrowLeft className="h-4 w-4" />
-
             Back to EBBC2026
           </Link>
 
-          {formError && (
+          {formError ? (
             <div className="mt-7 flex items-start gap-3 rounded-[18px] border border-red-200 bg-red-50 p-5 text-red-900">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
 
@@ -837,7 +1060,7 @@ export default function EBBC2026TicketsPage() {
                 {formError}
               </p>
             </div>
-          )}
+          ) : null}
 
           <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_420px] lg:items-start">
             <div>
@@ -847,18 +1070,25 @@ export default function EBBC2026TicketsPage() {
                 </p>
 
                 <h1 className="mt-5 [font-family:var(--font-display)] text-[50px] font-semibold leading-[0.94] tracking-[-0.05em] sm:text-[68px]">
-                  Secure Your Full Convention Pass
+                  Choose Your Event Day
                 </h1>
 
                 <p className="mt-6 max-w-2xl text-[15px] leading-8 text-[#0D1D34]/60">
-                  Complete the buyer and attendee
-                  details below, then continue to the
-                  secure Paystack checkout.
+                  Each ticket is
+                  valid for one
+                  attendee on one
+                  selected event day.
+                  Attending both days?
+                  Add two tickets and
+                  select a different
+                  day for each ticket.
                 </p>
               </div>
 
               <form
-                onSubmit={handleSubmit}
+                onSubmit={
+                  handleSubmit
+                }
                 className="mt-10 space-y-7"
               >
                 <div className="rounded-[28px] border border-[#0D1D34]/8 bg-white p-6 shadow-[0_25px_70px_rgba(13,29,52,0.08)] sm:p-9">
@@ -873,8 +1103,10 @@ export default function EBBC2026TicketsPage() {
                       </h2>
 
                       <p className="mt-1 text-xs text-[#0D1D34]/45">
-                        The person responsible for
-                        this registration.
+                        Person
+                        responsible for
+                        this
+                        registration.
                       </p>
                     </div>
                   </div>
@@ -888,11 +1120,17 @@ export default function EBBC2026TicketsPage() {
                       <input
                         required
                         type="text"
-                        value={buyer.fullName}
-                        onChange={(event) =>
+                        value={
+                          buyer.fullName
+                        }
+                        onChange={(
+                          event,
+                        ) =>
                           updateBuyer(
                             "fullName",
-                            event.target.value,
+                            event
+                              .target
+                              .value,
                           )
                         }
                         placeholder="Enter full name"
@@ -908,11 +1146,17 @@ export default function EBBC2026TicketsPage() {
                       <input
                         required
                         type="tel"
-                        value={buyer.phone}
-                        onChange={(event) =>
+                        value={
+                          buyer.phone
+                        }
+                        onChange={(
+                          event,
+                        ) =>
                           updateBuyer(
                             "phone",
-                            event.target.value,
+                            event
+                              .target
+                              .value,
                           )
                         }
                         placeholder="e.g. 0712 345 678"
@@ -928,11 +1172,17 @@ export default function EBBC2026TicketsPage() {
                       <input
                         required
                         type="email"
-                        value={buyer.email}
-                        onChange={(event) =>
+                        value={
+                          buyer.email
+                        }
+                        onChange={(
+                          event,
+                        ) =>
                           updateBuyer(
                             "email",
-                            event.target.value,
+                            event
+                              .target
+                              .value,
                           )
                         }
                         placeholder="name@example.com"
@@ -948,11 +1198,17 @@ export default function EBBC2026TicketsPage() {
                       <input
                         required
                         type="text"
-                        value={buyer.country}
-                        onChange={(event) =>
+                        value={
+                          buyer.country
+                        }
+                        onChange={(
+                          event,
+                        ) =>
                           updateBuyer(
                             "country",
-                            event.target.value,
+                            event
+                              .target
+                              .value,
                           )
                         }
                         placeholder="Country"
@@ -962,7 +1218,8 @@ export default function EBBC2026TicketsPage() {
 
                     <label>
                       <span className="text-[11px] font-extrabold">
-                        Company, Salon or Organisation
+                        Company, Salon
+                        or Organisation
                       </span>
 
                       <input
@@ -970,10 +1227,14 @@ export default function EBBC2026TicketsPage() {
                         value={
                           buyer.organisation
                         }
-                        onChange={(event) =>
+                        onChange={(
+                          event,
+                        ) =>
                           updateBuyer(
                             "organisation",
-                            event.target.value,
+                            event
+                              .target
+                              .value,
                           )
                         }
                         placeholder="Optional"
@@ -991,7 +1252,9 @@ export default function EBBC2026TicketsPage() {
                         value={
                           buyer.referralCode
                         }
-                        onChange={(event) =>
+                        onChange={(
+                          event,
+                        ) =>
                           updateBuyer(
                             "referralCode",
                             event.target.value.toUpperCase(),
@@ -1013,12 +1276,14 @@ export default function EBBC2026TicketsPage() {
 
                       <div>
                         <h2 className="text-lg font-extrabold">
-                          Attendee Details
+                          Ticket Details
                         </h2>
 
                         <p className="mt-1 text-xs text-[#0D1D34]/45">
-                          Complete one form for every
-                          ticket.
+                          Select the
+                          attendee and
+                          event day for
+                          every ticket.
                         </p>
                       </div>
                     </div>
@@ -1026,12 +1291,14 @@ export default function EBBC2026TicketsPage() {
                     <div className="flex w-fit items-center gap-4 rounded-full border border-[#0D1D34]/10 bg-[#FAFAFA] p-1.5">
                       <button
                         type="button"
-                        onClick={decreaseQuantity}
+                        onClick={
+                          decreaseQuantity
+                        }
                         disabled={
                           quantity === 1
                         }
+                        className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-[#CC8591] hover:text-white disabled:opacity-30"
                         aria-label="Decrease ticket quantity"
-                        className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-[#CC8591] hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0D1D34]"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
@@ -1042,12 +1309,14 @@ export default function EBBC2026TicketsPage() {
 
                       <button
                         type="button"
-                        onClick={increaseQuantity}
+                        onClick={
+                          increaseQuantity
+                        }
                         disabled={
                           quantity === 10
                         }
+                        className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-[#CC8591] hover:text-white disabled:opacity-30"
                         aria-label="Increase ticket quantity"
-                        className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-[#CC8591] hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0D1D34]"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
@@ -1056,20 +1325,28 @@ export default function EBBC2026TicketsPage() {
 
                   <div className="mt-7 space-y-6">
                     {attendees.map(
-                      (attendee, index) => (
+                      (
+                        attendee,
+                        index,
+                      ) => (
                         <div
-                          key={index}
+                          key={
+                            index
+                          }
                           className="rounded-[22px] border border-[#0D1D34]/8 bg-[#FAFAFA] p-5 sm:p-6"
                         >
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#CC8591]">
-                                Ticket {index + 1}
+                                Ticket{" "}
+                                {index +
+                                  1}
                               </p>
 
                               <h3 className="mt-1 text-base font-extrabold">
                                 Attendee{" "}
-                                {index + 1}
+                                {index +
+                                  1}
                               </h3>
                             </div>
 
@@ -1082,11 +1359,77 @@ export default function EBBC2026TicketsPage() {
                               }
                               className="inline-flex h-9 w-fit items-center justify-center rounded-full border border-[#0D1D34]/12 bg-white px-4 text-[10px] font-extrabold transition hover:border-[#CC8591] hover:text-[#CC8591]"
                             >
-                              Copy Buyer Details
+                              Copy Buyer
+                              Details
                             </button>
                           </div>
 
-                          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                          <div className="mt-5">
+                            <p className="text-[11px] font-extrabold">
+                              Event Day *
+                            </p>
+
+                            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                              {EVENT_DAYS.map(
+                                (
+                                  day,
+                                ) => {
+                                  const selected =
+                                    attendee.eventDate ===
+                                    day.value;
+
+                                  return (
+                                    <button
+                                      key={
+                                        day.value
+                                      }
+                                      type="button"
+                                      onClick={() =>
+                                        updateAttendee(
+                                          index,
+                                          "eventDate",
+                                          day.value,
+                                        )
+                                      }
+                                      className={`flex items-center justify-between rounded-[16px] border p-4 text-left transition ${
+                                        selected
+                                          ? "border-[#CC8591] bg-[#CC8591]/10 ring-4 ring-[#CC8591]/8"
+                                          : "border-[#0D1D34]/10 bg-white hover:border-[#CC8591]/50"
+                                      }`}
+                                    >
+                                      <div>
+                                        <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#CC8591]">
+                                          {
+                                            day.shortLabel
+                                          }
+                                        </p>
+
+                                        <p className="mt-1 text-sm font-extrabold">
+                                          {
+                                            day.label
+                                          }
+                                        </p>
+                                      </div>
+
+                                      <div
+                                        className={`grid h-6 w-6 place-items-center rounded-full border ${
+                                          selected
+                                            ? "border-[#CC8591] bg-[#CC8591] text-white"
+                                            : "border-[#0D1D34]/15"
+                                        }`}
+                                      >
+                                        {selected ? (
+                                          <CheckCircle2 className="h-4 w-4" />
+                                        ) : null}
+                                      </div>
+                                    </button>
+                                  );
+                                },
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-6 grid gap-5 sm:grid-cols-2">
                             <label>
                               <span className="text-[11px] font-extrabold">
                                 Full Name *
@@ -1098,11 +1441,15 @@ export default function EBBC2026TicketsPage() {
                                 value={
                                   attendee.fullName
                                 }
-                                onChange={(event) =>
+                                onChange={(
+                                  event,
+                                ) =>
                                   updateAttendee(
                                     index,
                                     "fullName",
-                                    event.target.value,
+                                    event
+                                      .target
+                                      .value,
                                   )
                                 }
                                 placeholder="Attendee full name"
@@ -1112,7 +1459,8 @@ export default function EBBC2026TicketsPage() {
 
                             <label>
                               <span className="text-[11px] font-extrabold">
-                                Participant Category *
+                                Participant
+                                Category *
                               </span>
 
                               <select
@@ -1120,21 +1468,28 @@ export default function EBBC2026TicketsPage() {
                                 value={
                                   attendee.category
                                 }
-                                onChange={(event) =>
+                                onChange={(
+                                  event,
+                                ) =>
                                   updateAttendee(
                                     index,
                                     "category",
-                                    event.target.value,
+                                    event
+                                      .target
+                                      .value,
                                   )
                                 }
                                 className="mt-2 h-[52px] w-full rounded-[14px] border border-[#0D1D34]/12 bg-white px-4 text-sm outline-none transition focus:border-[#CC8591] focus:ring-4 focus:ring-[#CC8591]/10"
                               >
                                 <option value="">
-                                  Select category
+                                  Select
+                                  category
                                 </option>
 
                                 {participantCategories.map(
-                                  (category) => (
+                                  (
+                                    category,
+                                  ) => (
                                     <option
                                       key={
                                         category
@@ -1143,7 +1498,9 @@ export default function EBBC2026TicketsPage() {
                                         category
                                       }
                                     >
-                                      {category}
+                                      {
+                                        category
+                                      }
                                     </option>
                                   ),
                                 )}
@@ -1161,11 +1518,15 @@ export default function EBBC2026TicketsPage() {
                                 value={
                                   attendee.email
                                 }
-                                onChange={(event) =>
+                                onChange={(
+                                  event,
+                                ) =>
                                   updateAttendee(
                                     index,
                                     "email",
-                                    event.target.value,
+                                    event
+                                      .target
+                                      .value,
                                   )
                                 }
                                 placeholder="name@example.com"
@@ -1184,11 +1545,15 @@ export default function EBBC2026TicketsPage() {
                                 value={
                                   attendee.phone
                                 }
-                                onChange={(event) =>
+                                onChange={(
+                                  event,
+                                ) =>
                                   updateAttendee(
                                     index,
                                     "phone",
-                                    event.target.value,
+                                    event
+                                      .target
+                                      .value,
                                   )
                                 }
                                 placeholder="e.g. 0712 345 678"
@@ -1207,11 +1572,15 @@ export default function EBBC2026TicketsPage() {
                                 value={
                                   attendee.country
                                 }
-                                onChange={(event) =>
+                                onChange={(
+                                  event,
+                                ) =>
                                   updateAttendee(
                                     index,
                                     "country",
-                                    event.target.value,
+                                    event
+                                      .target
+                                      .value,
                                   )
                                 }
                                 placeholder="Country"
@@ -1221,7 +1590,8 @@ export default function EBBC2026TicketsPage() {
 
                             <label>
                               <span className="text-[11px] font-extrabold">
-                                Company, Salon or Organisation
+                                Company, Salon
+                                or Organisation
                               </span>
 
                               <input
@@ -1229,11 +1599,15 @@ export default function EBBC2026TicketsPage() {
                                 value={
                                   attendee.organisation
                                 }
-                                onChange={(event) =>
+                                onChange={(
+                                  event,
+                                ) =>
                                   updateAttendee(
                                     index,
                                     "organisation",
-                                    event.target.value,
+                                    event
+                                      .target
+                                      .value,
                                   )
                                 }
                                 placeholder="Optional"
@@ -1248,19 +1622,21 @@ export default function EBBC2026TicketsPage() {
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="group mt-7 inline-flex h-[56px] w-full items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white shadow-[0_16px_35px_rgba(204,133,145,0.25)] transition hover:-translate-y-0.5 hover:bg-[#0D1D34] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                    disabled={
+                      isSubmitting
+                    }
+                    className="group mt-7 inline-flex h-[56px] w-full items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white shadow-[0_16px_35px_rgba(204,133,145,0.25)] transition hover:-translate-y-0.5 hover:bg-[#0D1D34] disabled:opacity-60"
                   >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin" />
-
-                        Saving Registration
+                        Saving
+                        Registration
                       </>
                     ) : (
                       <>
-                        Continue to Payment
-
+                        Continue to
+                        Payment
                         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                       </>
                     )}
@@ -1277,35 +1653,81 @@ export default function EBBC2026TicketsPage() {
                   </p>
 
                   <h2 className="mt-3 text-2xl font-extrabold">
-                    EBBC2026 Full Convention Pass
+                    EBBC2026 Day
+                    Ticket
                   </h2>
 
-                  <div className="mt-5 flex items-center gap-3 text-xs text-white/60">
-                    <CalendarDays className="h-4 w-4 text-[#CC8591]" />
+                  <div className="mt-5 flex items-start gap-3 text-xs leading-5 text-white/60">
+                    <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#CC8591]" />
 
-                    {EBBC2026.dates.display}
+                    <span>
+                      One ticket is
+                      valid only for
+                      its selected
+                      event day.
+                    </span>
                   </div>
                 </div>
 
                 <div className="p-7">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-5">
+                  <div className="space-y-3 border-b border-white/10 pb-5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-white/55">
+                        17 November
+                      </span>
+
+                      <span className="text-xs font-extrabold">
+                        {
+                          dayOneCount
+                        }{" "}
+                        ticket
+                        {dayOneCount ===
+                        1
+                          ? ""
+                          : "s"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-white/55">
+                        18 November
+                      </span>
+
+                      <span className="text-xs font-extrabold">
+                        {
+                          dayTwoCount
+                        }{" "}
+                        ticket
+                        {dayTwoCount ===
+                        1
+                          ? ""
+                          : "s"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-white/10 py-5">
                     <div>
                       <p className="text-xs font-bold text-white/60">
                         KES{" "}
                         {formatMoney(
-                          EBBC2026.ticket
+                          EBBC2026
+                            .ticket
                             .priceKes,
                         )}{" "}
                         × {quantity}
                       </p>
 
                       <p className="mt-1 text-sm font-extrabold">
-                        Convention Pass
+                        Day Ticket
                       </p>
                     </div>
 
                     <p className="text-lg font-extrabold">
-                      KES {formattedTotal}
+                      KES{" "}
+                      {formatMoney(
+                        totalAmount,
+                      )}
                     </p>
                   </div>
 
@@ -1316,32 +1738,39 @@ export default function EBBC2026TicketsPage() {
                       </p>
 
                       <p className="mt-1 text-xs text-white/50">
-                        Kenyan Shillings
+                        Kenyan
+                        Shillings
                       </p>
                     </div>
 
                     <p className="text-3xl font-black text-[#CC8591]">
-                      KES {formattedTotal}
+                      KES{" "}
+                      {formatMoney(
+                        totalAmount,
+                      )}
                     </p>
                   </div>
 
-                  <div className="space-y-3 border-t border-white/10 pt-6">
-                    {EBBC2026.ticket.includes.map(
-                      (item) => (
-                        <div
-                          key={item}
-                          className="flex items-start gap-3"
-                        >
-                          <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#CC8591]">
-                            <Check className="h-3 w-3" />
-                          </span>
+                  <div className="space-y-3 border-t border-white/10 pt-6 text-[11px] leading-5 text-white/60">
+                    <p>
+                      • One ticket =
+                      one attendee +
+                      one selected
+                      event day.
+                    </p>
 
-                          <span className="text-[12px] leading-5 text-white/65">
-                            {item}
-                          </span>
-                        </div>
-                      ),
-                    )}
+                    <p>
+                      • Attending both
+                      days requires two
+                      tickets.
+                    </p>
+
+                    <p>
+                      • Your QR is used
+                      for entry and
+                      same-day
+                      verification.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1352,14 +1781,16 @@ export default function EBBC2026TicketsPage() {
 
                   <div>
                     <p className="text-xs font-extrabold">
-                      Secure Registration
+                      Secure
+                      Registration
                     </p>
 
                     <p className="mt-2 text-[11px] leading-5 text-[#0D1D34]/50">
-                      Registration details are stored
-                      securely. Tickets only become
-                      active after Paystack confirms
-                      the payment.
+                      Tickets become
+                      active only after
+                      successful
+                      payment
+                      confirmation.
                     </p>
                   </div>
                 </div>
@@ -1367,13 +1798,11 @@ export default function EBBC2026TicketsPage() {
                 <div className="mt-5 flex items-center gap-5 border-t border-[#0D1D34]/8 pt-5 text-[10px] font-bold text-[#0D1D34]/45">
                   <span className="inline-flex items-center gap-2">
                     <Smartphone className="h-4 w-4 text-[#CC8591]" />
-
                     M-Pesa
                   </span>
 
                   <span className="inline-flex items-center gap-2">
                     <CreditCard className="h-4 w-4 text-[#CC8591]" />
-
                     Card
                   </span>
                 </div>

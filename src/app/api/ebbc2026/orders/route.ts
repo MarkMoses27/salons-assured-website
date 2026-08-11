@@ -8,6 +8,14 @@ export const dynamic = "force-dynamic";
 const ticketPriceKes = 4500;
 const maximumTickets = 10;
 
+const EVENT_DATES = [
+  "2026-11-17",
+  "2026-11-18",
+] as const;
+
+type EventDate =
+  (typeof EVENT_DATES)[number];
+
 type AttendeeInput = {
   fullName?: string;
   email?: string;
@@ -15,6 +23,7 @@ type AttendeeInput = {
   category?: string;
   organisation?: string;
   country?: string;
+  eventDate?: string;
 };
 
 type CreateOrderBody = {
@@ -27,71 +36,114 @@ type CreateOrderBody = {
   attendees?: AttendeeInput[];
 };
 
-function cleanText(value: unknown) {
-  if (typeof value !== "string") {
+function cleanText(
+  value: unknown,
+) {
+  if (
+    typeof value !==
+    "string"
+  ) {
     return "";
   }
 
   return value.trim();
 }
 
-function normaliseEmail(value: unknown) {
-  return cleanText(value).toLowerCase();
+function normaliseEmail(
+  value: unknown,
+) {
+  return cleanText(
+    value,
+  ).toLowerCase();
 }
 
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function isValidPhone(phone: string) {
-  const cleanedPhone = phone.replace(
-    /[\s\-()]/g,
-    "",
+function isValidEmail(
+  email: string,
+) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    email,
   );
-
-  return /^\+?[0-9]{9,15}$/.test(cleanedPhone);
 }
 
-export async function POST(request: Request) {
-  let createdOrderId: string | null = null;
+function isValidPhone(
+  phone: string,
+) {
+  const cleanedPhone =
+    phone.replace(
+      /[\s\-()]/g,
+      "",
+    );
+
+  return /^\+?[0-9]{9,15}$/.test(
+    cleanedPhone,
+  );
+}
+
+function isEventDate(
+  value: string,
+): value is EventDate {
+  return EVENT_DATES.includes(
+    value as EventDate,
+  );
+}
+
+export async function POST(
+  request: Request,
+) {
+  let createdOrderId:
+    | string
+    | null = null;
 
   try {
     const body =
-      (await request.json()) as CreateOrderBody;
+      (await request.json()) as
+        CreateOrderBody;
 
-    const buyerFullName = cleanText(
-      body.buyerFullName,
-    );
+    const buyerFullName =
+      cleanText(
+        body.buyerFullName,
+      );
 
-    const buyerEmail = normaliseEmail(
-      body.buyerEmail,
-    );
+    const buyerEmail =
+      normaliseEmail(
+        body.buyerEmail,
+      );
 
-    const buyerPhone = cleanText(
-      body.buyerPhone,
-    );
+    const buyerPhone =
+      cleanText(
+        body.buyerPhone,
+      );
 
     const country =
-      cleanText(body.country) || "Kenya";
+      cleanText(
+        body.country,
+      ) || "Kenya";
 
-    const organisation = cleanText(
-      body.organisation,
-    );
+    const organisation =
+      cleanText(
+        body.organisation,
+      );
 
-    const referralCode = cleanText(
-      body.referralCode,
-    ).toUpperCase();
+    const referralCode =
+      cleanText(
+        body.referralCode,
+      ).toUpperCase();
 
-    const attendees = Array.isArray(
-      body.attendees,
-    )
-      ? body.attendees
-      : [];
+    const attendees =
+      Array.isArray(
+        body.attendees,
+      )
+        ? body.attendees
+        : [];
 
-    if (buyerFullName.length < 2) {
+    if (
+      buyerFullName.length <
+      2
+    ) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "Please enter the buyer's full name.",
         },
@@ -101,10 +153,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isValidEmail(buyerEmail)) {
+    if (
+      !isValidEmail(
+        buyerEmail,
+      )
+    ) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "Please enter a valid email address.",
         },
@@ -114,10 +171,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isValidPhone(buyerPhone)) {
+    if (
+      !isValidPhone(
+        buyerPhone,
+      )
+    ) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "Please enter a valid phone number.",
         },
@@ -128,12 +190,15 @@ export async function POST(request: Request) {
     }
 
     if (
-      attendees.length < 1 ||
-      attendees.length > maximumTickets
+      attendees.length <
+        1 ||
+      attendees.length >
+        maximumTickets
     ) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "Each order must contain between 1 and 10 attendees.",
         },
@@ -144,91 +209,151 @@ export async function POST(request: Request) {
     }
 
     const normalisedAttendees =
-      attendees.map((attendee, index) => {
-        const fullName = cleanText(
-          attendee.fullName,
-        );
+      attendees.map(
+        (
+          attendee,
+          index,
+        ) => {
+          const fullName =
+            cleanText(
+              attendee.fullName,
+            );
 
-        const email =
-          normaliseEmail(attendee.email) ||
-          buyerEmail;
+          const email =
+            normaliseEmail(
+              attendee.email,
+            ) ||
+            buyerEmail;
 
-        const phone =
-          cleanText(attendee.phone) ||
-          buyerPhone;
+          const phone =
+            cleanText(
+              attendee.phone,
+            ) ||
+            buyerPhone;
 
-        const category = cleanText(
-          attendee.category,
-        );
+          const category =
+            cleanText(
+              attendee.category,
+            );
 
-        const attendeeOrganisation =
-          cleanText(
-            attendee.organisation,
-          ) || organisation;
+          const attendeeOrganisation =
+            cleanText(
+              attendee.organisation,
+            ) ||
+            organisation;
 
-        const attendeeCountry =
-          cleanText(attendee.country) ||
-          country;
+          const attendeeCountry =
+            cleanText(
+              attendee.country,
+            ) ||
+            country;
 
-        if (fullName.length < 2) {
-          throw new Error(
-            `Please enter the full name for attendee ${
-              index + 1
-            }.`,
-          );
-        }
+          const eventDate =
+            cleanText(
+              attendee.eventDate,
+            );
 
-        if (!isValidEmail(email)) {
-          throw new Error(
-            `Please enter a valid email for attendee ${
-              index + 1
-            }.`,
-          );
-        }
+          if (
+            fullName.length <
+            2
+          ) {
+            throw new Error(
+              `Please enter the full name for attendee ${
+                index + 1
+              }.`,
+            );
+          }
 
-        if (!isValidPhone(phone)) {
-          throw new Error(
-            `Please enter a valid phone number for attendee ${
-              index + 1
-            }.`,
-          );
-        }
+          if (
+            !isValidEmail(
+              email,
+            )
+          ) {
+            throw new Error(
+              `Please enter a valid email for attendee ${
+                index + 1
+              }.`,
+            );
+          }
 
-        if (!category) {
-          throw new Error(
-            `Please select a category for attendee ${
-              index + 1
-            }.`,
-          );
-        }
+          if (
+            !isValidPhone(
+              phone,
+            )
+          ) {
+            throw new Error(
+              `Please enter a valid phone number for attendee ${
+                index + 1
+              }.`,
+            );
+          }
 
-        return {
-          fullName,
-          email,
-          phone,
-          category,
-          organisation:
-            attendeeOrganisation,
-          country: attendeeCountry,
-        };
-      });
+          if (!category) {
+            throw new Error(
+              `Please select a category for attendee ${
+                index + 1
+              }.`,
+            );
+          }
 
-    let referralCodeId: string | null =
-      null;
+          if (
+            !isEventDate(
+              eventDate,
+            )
+          ) {
+            throw new Error(
+              `Please select either 17 November 2026 or 18 November 2026 for attendee ${
+                index + 1
+              }.`,
+            );
+          }
 
-    if (referralCode) {
+          return {
+            fullName,
+            email,
+            phone,
+            category,
+
+            organisation:
+              attendeeOrganisation,
+
+            country:
+              attendeeCountry,
+
+            eventDate,
+          };
+        },
+      );
+
+    let referralCodeId:
+      | string
+      | null = null;
+
+    if (
+      referralCode
+    ) {
       const {
-        data: referral,
-        error: referralError,
-      } = await supabaseAdmin
-        .from("ebbc_referral_codes")
-        .select(
-          "id, is_active, expires_at, usage_limit, usage_count",
-        )
-        .eq("code", referralCode)
-        .maybeSingle();
+        data:
+          referral,
+        error:
+          referralError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ebbc_referral_codes",
+          )
+          .select(
+            "id, is_active, expires_at, usage_limit, usage_count",
+          )
+          .eq(
+            "code",
+            referralCode,
+          )
+          .maybeSingle();
 
-      if (referralError) {
+      if (
+        referralError
+      ) {
         console.error(
           "Referral-code lookup error:",
           referralError,
@@ -237,11 +362,13 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             ok: false,
+
             message:
               "The referral code could not be verified.",
           },
           {
-            status: 500,
+            status:
+              500,
           },
         );
       }
@@ -250,99 +377,140 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             ok: false,
+
             message:
               "The referral code entered is not valid.",
           },
           {
-            status: 400,
+            status:
+              400,
           },
         );
       }
 
-      if (!referral.is_active) {
+      if (
+        !referral.is_active
+      ) {
         return NextResponse.json(
           {
             ok: false,
+
             message:
               "The referral code is no longer active.",
           },
           {
-            status: 400,
+            status:
+              400,
           },
         );
       }
 
       if (
         referral.expires_at &&
-        new Date(referral.expires_at) <
-          new Date()
+        new Date(
+          referral.expires_at,
+        ) < new Date()
       ) {
         return NextResponse.json(
           {
             ok: false,
+
             message:
               "The referral code has expired.",
           },
           {
-            status: 400,
+            status:
+              400,
           },
         );
       }
 
       if (
-        referral.usage_limit !== null &&
+        referral.usage_limit !==
+          null &&
         referral.usage_count >=
           referral.usage_limit
       ) {
         return NextResponse.json(
           {
             ok: false,
+
             message:
               "The referral code has reached its usage limit.",
           },
           {
-            status: 400,
+            status:
+              400,
           },
         );
       }
 
-      referralCodeId = referral.id;
+      referralCodeId =
+        referral.id;
     }
 
     const ticketQuantity =
       normalisedAttendees.length;
 
-    const { data: order, error: orderError } =
+    const {
+      data: order,
+      error:
+        orderError,
+    } =
       await supabaseAdmin
-        .from("ebbc_orders")
+        .from(
+          "ebbc_orders",
+        )
         .insert({
           buyer_full_name:
             buyerFullName,
-          buyer_email: buyerEmail,
-          buyer_phone: buyerPhone,
+
+          buyer_email:
+            buyerEmail,
+
+          buyer_phone:
+            buyerPhone,
+
           country,
+
           organisation:
-            organisation || null,
+            organisation ||
+            null,
+
           ticket_quantity:
             ticketQuantity,
+
           unit_price_kes:
             ticketPriceKes,
-          discount_amount_kes: 0,
-          currency: "KES",
+
+          discount_amount_kes:
+            0,
+
+          currency:
+            "KES",
+
           referral_code_id:
             referralCodeId,
+
           referral_code_entered:
-            referralCode || null,
+            referralCode ||
+            null,
+
           order_status:
             "payment_pending",
-          payment_status: "unpaid",
+
+          payment_status:
+            "unpaid",
         })
         .select(
           "id, order_number, ticket_quantity, unit_price_kes, subtotal_amount_kes, total_amount_kes, currency, order_status, payment_status",
         )
         .single();
 
-    if (orderError || !order) {
+    if (
+      orderError ||
+      !order
+    ) {
       console.error(
         "EBBC2026 order creation error:",
         orderError,
@@ -351,51 +519,76 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "The registration order could not be created.",
         },
         {
-          status: 500,
+          status:
+            500,
         },
       );
     }
 
-    createdOrderId = order.id;
+    createdOrderId =
+      order.id;
 
     const ticketRows =
       normalisedAttendees.map(
-        (attendee) => ({
-          order_id: order.id,
+        (
+          attendee,
+        ) => ({
+          order_id:
+            order.id,
+
           attendee_full_name:
             attendee.fullName,
+
           attendee_email:
             attendee.email,
+
           attendee_phone:
             attendee.phone,
+
           participant_category:
             attendee.category,
+
           organisation:
             attendee.organisation ||
             null,
-          country: attendee.country,
-          ticket_status: "pending",
+
+          country:
+            attendee.country,
+
+          event_date:
+            attendee.eventDate,
+
+          ticket_status:
+            "pending",
         }),
       );
 
     const {
       data: tickets,
-      error: ticketError,
-    } = await supabaseAdmin
-      .from("ebbc_tickets")
-      .insert(ticketRows)
-      .select(
-        "id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, ticket_status",
-      );
+      error:
+        ticketError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_tickets",
+        )
+        .insert(
+          ticketRows,
+        )
+        .select(
+          "id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, event_date, ticket_status",
+        );
 
     if (
       ticketError ||
       !tickets ||
-      tickets.length !== ticketQuantity
+      tickets.length !==
+        ticketQuantity
     ) {
       console.error(
         "EBBC2026 ticket creation error:",
@@ -403,24 +596,36 @@ export async function POST(request: Request) {
       );
 
       await supabaseAdmin
-        .from("ebbc_orders")
+        .from(
+          "ebbc_orders",
+        )
         .delete()
-        .eq("id", order.id);
+        .eq(
+          "id",
+          order.id,
+        );
 
       return NextResponse.json(
         {
           ok: false,
+
           message:
             "The attendee tickets could not be prepared.",
         },
         {
-          status: 500,
+          status:
+            500,
         },
       );
     }
 
-    if (referralCodeId) {
-      const { error: referralUpdateError } =
+    if (
+      referralCodeId
+    ) {
+      const {
+        error:
+          referralUpdateError,
+      } =
         await supabaseAdmin.rpc(
           "increment_ebbc_referral_usage",
           {
@@ -429,7 +634,9 @@ export async function POST(request: Request) {
           },
         );
 
-      if (referralUpdateError) {
+      if (
+        referralUpdateError
+      ) {
         console.warn(
           "Referral usage was not updated:",
           referralUpdateError,
@@ -440,34 +647,51 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: true,
+
         message:
           "Your EBBC2026 registration order has been created.",
+
         order: {
           orderNumber:
             order.order_number,
+
           quantity:
             order.ticket_quantity,
+
           unitPriceKes:
             order.unit_price_kes,
+
           totalAmountKes:
             order.total_amount_kes,
+
           currency:
             order.currency,
+
           orderStatus:
             order.order_status,
+
           paymentStatus:
             order.payment_status,
         },
-        tickets: tickets.map(
-          (ticket) => ({
-            ticketNumber:
-              ticket.ticket_number,
-            attendeeName:
-              ticket.attendee_full_name,
-            status:
-              ticket.ticket_status,
-          }),
-        ),
+
+        tickets:
+          tickets.map(
+            (
+              ticket,
+            ) => ({
+              ticketNumber:
+                ticket.ticket_number,
+
+              attendeeName:
+                ticket.attendee_full_name,
+
+              eventDate:
+                ticket.event_date,
+
+              status:
+                ticket.ticket_status,
+            }),
+          ),
       },
       {
         status: 201,
@@ -479,15 +703,23 @@ export async function POST(request: Request) {
       error,
     );
 
-    if (createdOrderId) {
+    if (
+      createdOrderId
+    ) {
       await supabaseAdmin
-        .from("ebbc_orders")
+        .from(
+          "ebbc_orders",
+        )
         .delete()
-        .eq("id", createdOrderId);
+        .eq(
+          "id",
+          createdOrderId,
+        );
     }
 
     const message =
-      error instanceof Error
+      error instanceof
+      Error
         ? error.message
         : "An unexpected registration error occurred.";
 
@@ -497,7 +729,8 @@ export async function POST(request: Request) {
         message,
       },
       {
-        status: 500,
+        status:
+          500,
       },
     );
   }

@@ -38,6 +38,7 @@ type TicketRecord = {
   country: string | null;
   ticket_status: string;
   access_token: string;
+  event_date: string | null;
 };
 
 function jsonResponse(
@@ -53,7 +54,9 @@ function getBearerToken(
   request: Request,
 ) {
   const authorization =
-    request.headers.get("authorization");
+    request.headers.get(
+      "authorization",
+    );
 
   if (!authorization) {
     return null;
@@ -63,7 +66,8 @@ function getBearerToken(
     authorization.split(" ");
 
   if (
-    scheme?.toLowerCase() !== "bearer" ||
+    scheme?.toLowerCase() !==
+      "bearer" ||
     !token?.trim()
   ) {
     return null;
@@ -123,7 +127,9 @@ function getNairobiDate() {
         month: "2-digit",
         day: "2-digit",
       },
-    ).formatToParts(new Date());
+    ).formatToParts(
+      new Date(),
+    );
 
   const year =
     parts.find(
@@ -164,6 +170,19 @@ function isEventDate(
   );
 }
 
+function formatEventDate(
+  value: EventDate,
+) {
+  if (
+    value ===
+    "2026-11-17"
+  ) {
+    return "17 November 2026";
+  }
+
+  return "18 November 2026";
+}
+
 async function recordCheckIn({
   ticketId,
   attemptedTicketNumber,
@@ -189,20 +208,27 @@ async function recordCheckIn({
     data,
     error,
   } = await supabaseAdmin
-    .from("ebbc_checkins")
+    .from(
+      "ebbc_checkins",
+    )
     .insert({
-      ticket_id: ticketId,
+      ticket_id:
+        ticketId,
 
       attempted_ticket_number:
         attemptedTicketNumber,
 
-      scan_result: scanResult,
+      scan_result:
+        scanResult,
 
-      gate_name: gateName,
+      gate_name:
+        gateName,
 
-      scanned_by: scannedBy,
+      scanned_by:
+        scannedBy,
 
-      event_date: eventDate,
+      event_date:
+        eventDate,
 
       notes:
         notes || null,
@@ -277,10 +303,13 @@ async function getAuthorizedStaff(
 
   if (
     !staff ||
-    staff.is_active !== true ||
+    staff.is_active !==
+      true ||
     (
-      staff.role !== "scanner" &&
-      staff.role !== "admin"
+      staff.role !==
+        "scanner" &&
+      staff.role !==
+        "admin"
     )
   ) {
     return {
@@ -296,8 +325,10 @@ async function getAuthorizedStaff(
 
     user: {
       id: user.id,
+
       email:
-        user.email || null,
+        user.email ||
+        null,
 
       displayName:
         staff.display_name,
@@ -308,11 +339,40 @@ async function getAuthorizedStaff(
   };
 }
 
+function ticketSummary(
+  ticket: TicketRecord,
+) {
+  return {
+    ticketNumber:
+      ticket.ticket_number,
+
+    attendeeName:
+      ticket.attendee_full_name,
+
+    attendeeEmail:
+      ticket.attendee_email,
+
+    participantCategory:
+      ticket.participant_category,
+
+    organisation:
+      ticket.organisation,
+
+    country:
+      ticket.country,
+
+    eventDate:
+      ticket.event_date,
+  };
+}
+
 export async function POST(
   request: Request,
 ) {
   const accessToken =
-    getBearerToken(request);
+    getBearerToken(
+      request,
+    );
 
   if (!accessToken) {
     return jsonResponse(
@@ -361,7 +421,8 @@ export async function POST(
 
   const scannedValue =
     String(
-      body.scannedValue || "",
+      body.scannedValue ||
+        "",
     ).trim();
 
   const gateName =
@@ -370,7 +431,10 @@ export async function POST(
         "Main Entrance",
     )
       .trim()
-      .slice(0, 100);
+      .slice(
+        0,
+        100,
+      );
 
   if (!scannedValue) {
     return jsonResponse(
@@ -401,10 +465,15 @@ export async function POST(
     getNairobiDate();
 
   /*
-   * Local development only:
-   * allows us to test Day 1 and Day 2
-   * before November without weakening
-   * production security.
+   * Local development only.
+   *
+   * This lets us simulate
+   * 17 November and
+   * 18 November before
+   * the actual event dates.
+   *
+   * Production always uses
+   * the real Nairobi date.
    */
   if (
     process.env.NODE_ENV !==
@@ -426,7 +495,10 @@ export async function POST(
     return jsonResponse(
       {
         ok: false,
-        eventOpen: false,
+
+        eventOpen:
+          false,
+
         message:
           "EBBC2026 ticket check-in is only available on 17 and 18 November 2026.",
       },
@@ -442,7 +514,8 @@ export async function POST(
   if (!ticketToken) {
     try {
       await recordCheckIn({
-        ticketId: null,
+        ticketId:
+          null,
 
         attemptedTicketNumber:
           null,
@@ -468,18 +541,18 @@ export async function POST(
       );
     }
 
-    return jsonResponse(
-      {
-        ok: true,
-        scanResult:
-          "invalid",
-        eventDate:
-          currentEventDate,
-        message:
-          "Invalid EBBC2026 ticket.",
-      },
-      200,
-    );
+    return jsonResponse({
+      ok: true,
+
+      scanResult:
+        "invalid",
+
+      eventDate:
+        currentEventDate,
+
+      message:
+        "Invalid EBBC2026 ticket.",
+    });
   }
 
   try {
@@ -488,9 +561,11 @@ export async function POST(
       error:
         ticketLookupError,
     } = await supabaseAdmin
-      .from("ebbc_tickets")
+      .from(
+        "ebbc_tickets",
+      )
       .select(
-        "id, order_id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, organisation, country, ticket_status, access_token",
+        "id, order_id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, organisation, country, ticket_status, access_token, event_date",
       )
       .eq(
         "access_token",
@@ -498,7 +573,9 @@ export async function POST(
       )
       .maybeSingle();
 
-    if (ticketLookupError) {
+    if (
+      ticketLookupError
+    ) {
       console.error(
         "EBBC2026 ticket lookup error:",
         ticketLookupError,
@@ -507,6 +584,7 @@ export async function POST(
       return jsonResponse(
         {
           ok: false,
+
           message:
             "The ticket could not be verified.",
         },
@@ -516,7 +594,8 @@ export async function POST(
 
     if (!ticketRow) {
       await recordCheckIn({
-        ticketId: null,
+        ticketId:
+          null,
 
         attemptedTicketNumber:
           null,
@@ -551,14 +630,17 @@ export async function POST(
     }
 
     const ticket =
-      ticketRow as TicketRecord;
+      ticketRow as
+        TicketRecord;
 
     const {
       data: order,
       error:
         orderLookupError,
     } = await supabaseAdmin
-      .from("ebbc_orders")
+      .from(
+        "ebbc_orders",
+      )
       .select(
         "id, order_number, payment_status, order_status",
       )
@@ -580,6 +662,7 @@ export async function POST(
       return jsonResponse(
         {
           ok: false,
+
           message:
             "The registration order could not be verified.",
         },
@@ -634,29 +717,20 @@ export async function POST(
 
         checkIn,
 
-        ticket: {
-          ticketNumber:
-            ticket.ticket_number,
-
-          attendeeName:
-            ticket.attendee_full_name,
-
-          participantCategory:
-            ticket.participant_category,
-
-          organisation:
-            ticket.organisation,
-        },
+        ticket:
+          ticketSummary(
+            ticket,
+          ),
       });
     }
 
     const paymentIsValid =
       order.payment_status ===
-        "paid";
+      "paid";
 
     const ticketIsActive =
       ticketStatus ===
-        "active";
+      "active";
 
     if (
       !paymentIsValid ||
@@ -699,29 +773,155 @@ export async function POST(
 
         checkIn,
 
-        ticket: {
-          ticketNumber:
-            ticket.ticket_number,
-
-          attendeeName:
-            ticket.attendee_full_name,
-
-          participantCategory:
-            ticket.participant_category,
-
-          organisation:
-            ticket.organisation,
-        },
+        ticket:
+          ticketSummary(
+            ticket,
+          ),
       });
     }
 
+    /*
+     * Every EBBC2026 ticket
+     * must now have exactly
+     * one selected event day.
+     *
+     * A missing/invalid day
+     * must never grant entry.
+     */
+    if (
+      !ticket.event_date ||
+      !isEventDate(
+        ticket.event_date,
+      )
+    ) {
+      const checkIn =
+        await recordCheckIn({
+          ticketId:
+            ticket.id,
+
+          attemptedTicketNumber:
+            ticket.ticket_number,
+
+          scanResult:
+            "rejected",
+
+          gateName,
+
+          scannedBy:
+            staff.user.id,
+
+          eventDate:
+            currentEventDate,
+
+          notes:
+            "Ticket has no valid EBBC2026 event_date and cannot be admitted.",
+        });
+
+      return jsonResponse({
+        ok: true,
+
+        scanResult:
+          "rejected",
+
+        eventDate:
+          currentEventDate,
+
+        message:
+          "Entry rejected. This ticket does not have a valid EBBC2026 event day.",
+
+        checkIn,
+
+        ticket:
+          ticketSummary(
+            ticket,
+          ),
+      });
+    }
+
+    const ticketEventDate =
+      ticket.event_date;
+
+    /*
+     * CRITICAL POLICY:
+     *
+     * 1 ticket = 1 person
+     * = 1 event day.
+     *
+     * A 17 November ticket
+     * cannot enter on
+     * 18 November and
+     * vice versa.
+     */
+    if (
+      ticketEventDate !==
+      currentEventDate
+    ) {
+      const checkIn =
+        await recordCheckIn({
+          ticketId:
+            ticket.id,
+
+          attemptedTicketNumber:
+            ticket.ticket_number,
+
+          scanResult:
+            "rejected",
+
+          gateName,
+
+          scannedBy:
+            staff.user.id,
+
+          eventDate:
+            currentEventDate,
+
+          notes:
+            `Wrong event day. Ticket is valid for ${ticketEventDate}; scan attempted on ${currentEventDate}.`,
+        });
+
+      return jsonResponse({
+        ok: true,
+
+        scanResult:
+          "rejected",
+
+        eventDate:
+          currentEventDate,
+
+        message:
+          `Entry rejected — wrong event day. This ticket is valid for ${formatEventDate(
+            ticketEventDate,
+          )} only.`,
+
+        checkIn,
+
+        ticket:
+          ticketSummary(
+            ticket,
+          ),
+      });
+    }
+
+    /*
+     * Check whether the ticket
+     * has already received an
+     * accepted entry on its
+     * valid event day.
+     *
+     * This is NOT rejection.
+     * It verifies same-day
+     * re-entry using the
+     * same QR.
+     */
     const {
       data:
         existingAcceptedScan,
       error:
         existingScanError,
     } = await supabaseAdmin
-      .from("ebbc_checkins")
+      .from(
+        "ebbc_checkins",
+      )
       .select(
         "id, scanned_at, gate_name",
       )
@@ -739,7 +939,9 @@ export async function POST(
       )
       .maybeSingle();
 
-    if (existingScanError) {
+    if (
+      existingScanError
+    ) {
       console.error(
         "EBBC2026 previous scan lookup error:",
         existingScanError,
@@ -748,6 +950,7 @@ export async function POST(
       return jsonResponse(
         {
           ok: false,
+
           message:
             "Previous ticket usage could not be verified.",
         },
@@ -778,7 +981,7 @@ export async function POST(
             currentEventDate,
 
           notes:
-            "Ticket was already accepted on this event day.",
+            "Same-day re-entry verified after an earlier accepted scan.",
         });
 
       return jsonResponse({
@@ -790,8 +993,11 @@ export async function POST(
         eventDate:
           currentEventDate,
 
+        reEntryVerified:
+          true,
+
         message:
-          "This ticket has already been used today.",
+          "Already Checked In Today — Same-day re-entry verified.",
 
         previousEntry: {
           scannedAt:
@@ -803,22 +1009,10 @@ export async function POST(
 
         checkIn,
 
-        ticket: {
-          ticketNumber:
-            ticket.ticket_number,
-
-          attendeeName:
-            ticket.attendee_full_name,
-
-          participantCategory:
-            ticket.participant_category,
-
-          organisation:
-            ticket.organisation,
-
-          country:
-            ticket.country,
-        },
+        ticket:
+          ticketSummary(
+            ticket,
+          ),
       });
     }
 
@@ -860,25 +1054,10 @@ export async function POST(
 
         checkIn,
 
-        ticket: {
-          ticketNumber:
-            ticket.ticket_number,
-
-          attendeeName:
-            ticket.attendee_full_name,
-
-          attendeeEmail:
-            ticket.attendee_email,
-
-          participantCategory:
-            ticket.participant_category,
-
-          organisation:
-            ticket.organisation,
-
-          country:
-            ticket.country,
-        },
+        ticket:
+          ticketSummary(
+            ticket,
+          ),
 
         order: {
           orderNumber:
@@ -892,14 +1071,46 @@ export async function POST(
         };
 
       /*
-       * Protects against two scanners
-       * accepting the same ticket at
-       * almost exactly the same time.
+       * Two scanners may read
+       * the same QR almost
+       * simultaneously.
+       *
+       * If the accepted-entry
+       * uniqueness protection
+       * catches that race,
+       * treat the second scan
+       * as verified same-day
+       * re-entry rather than
+       * denying the attendee.
        */
       if (
         databaseError?.code ===
         "23505"
       ) {
+        const {
+          data:
+            previousAcceptedScan,
+        } = await supabaseAdmin
+          .from(
+            "ebbc_checkins",
+          )
+          .select(
+            "id, scanned_at, gate_name",
+          )
+          .eq(
+            "ticket_id",
+            ticket.id,
+          )
+          .eq(
+            "event_date",
+            currentEventDate,
+          )
+          .eq(
+            "scan_result",
+            "accepted",
+          )
+          .maybeSingle();
+
         const checkIn =
           await recordCheckIn({
             ticketId:
@@ -920,7 +1131,7 @@ export async function POST(
               currentEventDate,
 
             notes:
-              "Concurrent duplicate entry attempt.",
+              "Concurrent scan resolved as same-day re-entry verification.",
           });
 
         return jsonResponse({
@@ -932,24 +1143,29 @@ export async function POST(
           eventDate:
             currentEventDate,
 
+          reEntryVerified:
+            true,
+
           message:
-            "This ticket has already been used today.",
+            "Already Checked In Today — Same-day re-entry verified.",
+
+          previousEntry:
+            previousAcceptedScan
+              ? {
+                  scannedAt:
+                    previousAcceptedScan.scanned_at,
+
+                  gateName:
+                    previousAcceptedScan.gate_name,
+                }
+              : undefined,
 
           checkIn,
 
-          ticket: {
-            ticketNumber:
-              ticket.ticket_number,
-
-            attendeeName:
-              ticket.attendee_full_name,
-
-            participantCategory:
-              ticket.participant_category,
-
-            organisation:
-              ticket.organisation,
-          },
+          ticket:
+            ticketSummary(
+              ticket,
+            ),
         });
       }
 
@@ -964,6 +1180,7 @@ export async function POST(
     return jsonResponse(
       {
         ok: false,
+
         message:
           "An unexpected ticket verification error occurred.",
       },
