@@ -2,9 +2,11 @@ import {
   createHmac,
   timingSafeEqual,
 } from "crypto";
+
 import { NextResponse } from "next/server";
 
 import { sendEbbc2026TicketEmailsForOrder } from "@/lib/ebbc2026/email";
+import { sendEbbc2026PaymentNotification } from "@/lib/ebbc2026/payment-notification";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -44,27 +46,39 @@ type PaystackWebhookEvent = {
   data?: PaystackWebhookData;
 };
 
+function jsonResponse(
+  body: Record<string, unknown>,
+  status = 200,
+) {
+  return NextResponse.json(body, {
+    status,
+  });
+}
+
 function verifyPaystackSignature(
   rawBody: string,
   receivedSignature: string,
   secretKey: string,
 ) {
-  const expectedSignature = createHmac(
-    "sha512",
-    secretKey,
-  )
-    .update(rawBody)
-    .digest("hex");
+  const expectedSignature =
+    createHmac(
+      "sha512",
+      secretKey,
+    )
+      .update(rawBody)
+      .digest("hex");
 
-  const expectedBuffer = Buffer.from(
-    expectedSignature,
-    "utf8",
-  );
+  const expectedBuffer =
+    Buffer.from(
+      expectedSignature,
+      "utf8",
+    );
 
-  const receivedBuffer = Buffer.from(
-    receivedSignature,
-    "utf8",
-  );
+  const receivedBuffer =
+    Buffer.from(
+      receivedSignature,
+      "utf8",
+    );
 
   if (
     expectedBuffer.length !==
@@ -79,16 +93,53 @@ function verifyPaystackSignature(
   );
 }
 
-function jsonResponse(
-  body: Record<string, unknown>,
-  status = 200,
+function getEbbcProcessingState(
+  providerResponse: unknown,
 ) {
-  return NextResponse.json(body, {
-    status,
-  });
+  if (
+    !providerResponse ||
+    typeof providerResponse !==
+      "object" ||
+    Array.isArray(providerResponse)
+  ) {
+    return {
+      processed: false,
+      staffNotificationSent: false,
+    };
+  }
+
+  const root =
+    providerResponse as
+      Record<string, unknown>;
+
+  const ebbc = root._ebbc;
+
+  if (
+    !ebbc ||
+    typeof ebbc !== "object" ||
+    Array.isArray(ebbc)
+  ) {
+    return {
+      processed: false,
+      staffNotificationSent: false,
+    };
+  }
+
+  const state =
+    ebbc as
+      Record<string, unknown>;
+
+  return {
+    processed:
+      state.processed === true,
+
+    staffNotificationSent:
+      state.staffNotificationSent ===
+      true,
+  };
 }
 
-async function sendTicketEmailsForWebhook(
+async function sendTicketEmails(
   orderId: string,
   orderNumber: string,
 ) {
@@ -99,21 +150,21 @@ async function sendTicketEmailsForWebhook(
       );
 
     console.log(
-      "EBBC2026 webhook ticket email delivery completed:",
+      "EBBC2026 ticket email result:",
       {
         orderNumber,
-        totalTickets:
-          result.totalTickets,
         sent: result.sent,
-        skipped: result.skipped,
-        failed: result.failed,
+        skipped:
+          result.skipped,
+        failed:
+          result.failed,
       },
     );
 
     return result;
   } catch (error) {
     console.error(
-      `EBBC2026 webhook ticket email delivery failed for order ${orderNumber}:`,
+      `EBBC2026 ticket email delivery failed for ${orderNumber}:`,
       error,
     );
 
@@ -121,9 +172,60 @@ async function sendTicketEmailsForWebhook(
   }
 }
 
-export async function POST(request: Request) {
+async function sendStaffNotification(
+  input: {
+    orderId: string;
+    orderNumber: string;
+    reference: string;
+    amountKes: number;
+    currency: string;
+    paymentMethod:
+      | string
+      | null;
+    providerTransactionId:
+      | string
+      | null;
+    paidAt: string;
+  },
+) {
+  try {
+    const result =
+      await sendEbbc2026PaymentNotification(
+        input,
+      );
+
+    console.log(
+      "EBBC2026 Elevate payment notification sent:",
+      {
+        orderNumber:
+          input.orderNumber,
+        recipient:
+          result.recipient,
+      },
+    );
+
+    return true;
+  } catch (error) {
+    console.error(
+      `EBBC2026 Elevate payment notification failed for ${input.orderNumber}:`,
+      error,
+    );
+
+    /*
+     * Internal staff email is useful but
+     * must never invalidate a real customer
+     * payment.
+     */
+    return false;
+  }
+}
+
+export async function POST(
+  request: Request,
+) {
   const paystackSecretKey =
-    process.env.PAYSTACK_SECRET_KEY;
+    process.env
+      .PAYSTACK_SECRET_KEY;
 
   if (!paystackSecretKey) {
     console.error(
@@ -159,7 +261,8 @@ export async function POST(request: Request) {
   let rawBody = "";
 
   try {
-    rawBody = await request.text();
+    rawBody =
+      await request.text();
   } catch (error) {
     console.error(
       "Could not read Paystack webhook body:",
@@ -176,18 +279,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const signatureIsValid =
-    verifyPaystackSignature(
+  if (
+    !verifyPaystackSignature(
       rawBody,
       receivedSignature,
       paystackSecretKey,
-    );
-
-  if (!signatureIsValid) {
-    console.error(
-      "Invalid Paystack webhook signature.",
-    );
-
+    )
+  ) {
     return jsonResponse(
       {
         ok: false,
@@ -198,7 +296,8 @@ export async function POST(request: Request) {
     );
   }
 
-  let webhookEvent: PaystackWebhookEvent;
+  let webhookEvent:
+    PaystackWebhookEvent;
 
   try {
     webhookEvent =
@@ -230,7 +329,8 @@ export async function POST(request: Request) {
       message:
         "The Paystack event was acknowledged and ignored.",
       event:
-        webhookEvent.event || "unknown",
+        webhookEvent.event ||
+        "unknown",
     });
   }
 
@@ -248,9 +348,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const reference = String(
-    transaction.reference || "",
-  ).trim();
+  const reference =
+    String(
+      transaction.reference ||
+        "",
+    ).trim();
 
   if (!reference) {
     return jsonResponse(
@@ -263,12 +365,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const transactionStatus = String(
-    transaction.status || "",
-  ).toLowerCase();
+  const transactionStatus =
+    String(
+      transaction.status ||
+        "",
+    ).toLowerCase();
 
   if (
-    transactionStatus !== "success"
+    transactionStatus !==
+    "success"
   ) {
     return jsonResponse({
       ok: true,
@@ -281,19 +386,25 @@ export async function POST(request: Request) {
   try {
     const {
       data: payment,
-      error: paymentLookupError,
-    } = await supabaseAdmin
-      .from("ebbc_payments")
-      .select(
-        "id, order_id, provider, transaction_reference, provider_transaction_id, amount_kes, currency, payment_status, customer_email",
-      )
-      .eq(
-        "transaction_reference",
-        reference,
-      )
-      .maybeSingle();
+      error:
+        paymentLookupError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_payments",
+        )
+        .select(
+          "id, order_id, provider, transaction_reference, provider_transaction_id, amount_kes, currency, payment_status, customer_email, provider_response",
+        )
+        .eq(
+          "transaction_reference",
+          reference,
+        )
+        .maybeSingle();
 
-    if (paymentLookupError) {
+    if (
+      paymentLookupError
+    ) {
       console.error(
         "Webhook payment lookup error:",
         paymentLookupError,
@@ -309,15 +420,9 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * Return 200 for an unknown valid Paystack
-     * transaction so Paystack does not keep
-     * retrying an event that does not belong
-     * to an EBBC2026 order.
-     */
     if (!payment) {
       console.warn(
-        "No EBBC2026 payment matched Paystack reference:",
+        "No EBBC2026 payment matched reference:",
         reference,
       );
 
@@ -347,17 +452,21 @@ export async function POST(request: Request) {
 
     const {
       data: order,
-      error: orderLookupError,
-    } = await supabaseAdmin
-      .from("ebbc_orders")
-      .select(
-        "id, order_number, buyer_email, total_amount_kes, currency, order_status, payment_status",
-      )
-      .eq(
-        "id",
-        payment.order_id,
-      )
-      .maybeSingle();
+      error:
+        orderLookupError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_orders",
+        )
+        .select(
+          "id, order_number, buyer_email, total_amount_kes, currency, order_status, payment_status",
+        )
+        .eq(
+          "id",
+          payment.order_id,
+        )
+        .maybeSingle();
 
     if (
       orderLookupError ||
@@ -378,30 +487,54 @@ export async function POST(request: Request) {
       );
     }
 
-    const expectedAmountKes = Number(
-      order.total_amount_kes,
-    );
+    const existingState =
+      getEbbcProcessingState(
+        payment.provider_response,
+      );
 
-    const storedPaymentAmountKes =
+    if (
+      existingState.processed &&
+      existingState.staffNotificationSent
+    ) {
+      return jsonResponse({
+        ok: true,
+        message:
+          "This Paystack payment webhook was already processed.",
+        reference,
+        orderNumber:
+          order.order_number,
+      });
+    }
+
+    const expectedAmountKes =
+      Number(
+        order.total_amount_kes,
+      );
+
+    const storedAmountKes =
       Number(
         payment.amount_kes,
       );
-
-    const expectedAmountSubunit =
-      expectedAmountKes * 100;
 
     const receivedAmountSubunit =
       Number(
         transaction.amount,
       );
 
-    const expectedCurrency = String(
-      order.currency || "KES",
-    ).toUpperCase();
+    const expectedAmountSubunit =
+      expectedAmountKes * 100;
 
-    const receivedCurrency = String(
-      transaction.currency || "",
-    ).toUpperCase();
+    const expectedCurrency =
+      String(
+        order.currency ||
+          "KES",
+      ).toUpperCase();
+
+    const receivedCurrency =
+      String(
+        transaction.currency ||
+          "",
+      ).toUpperCase();
 
     if (
       !Number.isInteger(
@@ -409,11 +542,6 @@ export async function POST(request: Request) {
       ) ||
       expectedAmountKes <= 0
     ) {
-      console.error(
-        "Invalid EBBC2026 order amount:",
-        order.total_amount_kes,
-      );
-
       return jsonResponse(
         {
           ok: false,
@@ -425,18 +553,9 @@ export async function POST(request: Request) {
     }
 
     if (
-      storedPaymentAmountKes !==
+      storedAmountKes !==
       expectedAmountKes
     ) {
-      console.error(
-        "Stored payment amount mismatch:",
-        {
-          reference,
-          storedPaymentAmountKes,
-          expectedAmountKes,
-        },
-      );
-
       return jsonResponse(
         {
           ok: false,
@@ -451,19 +570,13 @@ export async function POST(request: Request) {
       receivedAmountSubunit !==
       expectedAmountSubunit
     ) {
-      console.error(
-        "Paystack webhook amount mismatch:",
-        {
-          reference,
-          receivedAmountSubunit,
-          expectedAmountSubunit,
-        },
-      );
-
       await supabaseAdmin
-        .from("ebbc_payments")
+        .from(
+          "ebbc_payments",
+        )
         .update({
-          payment_status: "failed",
+          payment_status:
+            "failed",
 
           failure_reason:
             "The Paystack webhook amount did not match the registration order.",
@@ -474,7 +587,10 @@ export async function POST(request: Request) {
           verified_at:
             new Date().toISOString(),
         })
-        .eq("id", payment.id);
+        .eq(
+          "id",
+          payment.id,
+        );
 
       return jsonResponse(
         {
@@ -490,19 +606,13 @@ export async function POST(request: Request) {
       receivedCurrency !==
       expectedCurrency
     ) {
-      console.error(
-        "Paystack webhook currency mismatch:",
-        {
-          reference,
-          receivedCurrency,
-          expectedCurrency,
-        },
-      );
-
       await supabaseAdmin
-        .from("ebbc_payments")
+        .from(
+          "ebbc_payments",
+        )
         .update({
-          payment_status: "failed",
+          payment_status:
+            "failed",
 
           failure_reason:
             "The Paystack webhook currency did not match the registration order.",
@@ -513,7 +623,10 @@ export async function POST(request: Request) {
           verified_at:
             new Date().toISOString(),
         })
-        .eq("id", payment.id);
+        .eq(
+          "id",
+          payment.id,
+        );
 
       return jsonResponse(
         {
@@ -525,37 +638,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const paystackEmail = String(
-      transaction.customer?.email ||
-        "",
-    )
-      .trim()
-      .toLowerCase();
+    const paystackEmail =
+      String(
+        transaction.customer
+          ?.email || "",
+      )
+        .trim()
+        .toLowerCase();
 
-    const orderEmail = String(
-      order.buyer_email || "",
-    )
-      .trim()
-      .toLowerCase();
+    const orderEmail =
+      String(
+        order.buyer_email ||
+          "",
+      )
+        .trim()
+        .toLowerCase();
 
     if (
       paystackEmail &&
       orderEmail &&
-      paystackEmail !== orderEmail
+      paystackEmail !==
+        orderEmail
     ) {
-      console.error(
-        "Paystack webhook customer mismatch:",
-        {
-          reference,
-          paystackEmail,
-          orderEmail,
-        },
-      );
-
       await supabaseAdmin
-        .from("ebbc_payments")
+        .from(
+          "ebbc_payments",
+        )
         .update({
-          payment_status: "failed",
+          payment_status:
+            "failed",
 
           failure_reason:
             "The Paystack webhook customer email did not match the registration.",
@@ -566,7 +677,10 @@ export async function POST(request: Request) {
           verified_at:
             new Date().toISOString(),
         })
-        .eq("id", payment.id);
+        .eq(
+          "id",
+          payment.id,
+        );
 
       return jsonResponse(
         {
@@ -592,38 +706,52 @@ export async function POST(request: Request) {
       null;
 
     const providerTransactionId =
-      transaction.id === undefined ||
+      transaction.id ===
+        undefined ||
       transaction.id === null
         ? null
-        : String(transaction.id);
+        : String(
+            transaction.id,
+          );
 
     const {
-      error: paymentUpdateError,
-    } = await supabaseAdmin
-      .from("ebbc_payments")
-      .update({
-        provider_transaction_id:
-          providerTransactionId,
+      error:
+        paymentUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_payments",
+        )
+        .update({
+          provider_transaction_id:
+            providerTransactionId,
 
-        payment_method:
-          paymentMethod,
+          payment_method:
+            paymentMethod,
 
-        payment_status:
-          "successful",
+          payment_status:
+            "successful",
 
-        provider_response:
-          webhookEvent,
+          provider_response:
+            webhookEvent,
 
-        failure_reason: null,
+          failure_reason:
+            null,
 
-        paid_at: paidAt,
+          paid_at:
+            paidAt,
 
-        verified_at:
-          currentTime,
-      })
-      .eq("id", payment.id);
+          verified_at:
+            currentTime,
+        })
+        .eq(
+          "id",
+          payment.id,
+        );
 
-    if (paymentUpdateError) {
+    if (
+      paymentUpdateError
+    ) {
       console.error(
         "Webhook payment update error:",
         paymentUpdateError,
@@ -640,17 +768,31 @@ export async function POST(request: Request) {
     }
 
     const {
-      error: orderUpdateError,
-    } = await supabaseAdmin
-      .from("ebbc_orders")
-      .update({
-        payment_status: "paid",
-        order_status: "paid",
-        paid_at: paidAt,
-      })
-      .eq("id", order.id);
+      error:
+        orderUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_orders",
+        )
+        .update({
+          payment_status:
+            "paid",
 
-    if (orderUpdateError) {
+          order_status:
+            "paid",
+
+          paid_at:
+            paidAt,
+        })
+        .eq(
+          "id",
+          order.id,
+        );
+
+    if (
+      orderUpdateError
+    ) {
       console.error(
         "Webhook order update error:",
         orderUpdateError,
@@ -667,21 +809,38 @@ export async function POST(request: Request) {
     }
 
     const {
-      error: ticketUpdateError,
-    } = await supabaseAdmin
-      .from("ebbc_tickets")
-      .update({
-        payment_id: payment.id,
-        ticket_status: "active",
-        issued_at: currentTime,
-      })
-      .eq("order_id", order.id)
-      .in("ticket_status", [
-        "pending",
-        "active",
-      ]);
+      error:
+        ticketUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_tickets",
+        )
+        .update({
+          payment_id:
+            payment.id,
 
-    if (ticketUpdateError) {
+          ticket_status:
+            "active",
+
+          issued_at:
+            currentTime,
+        })
+        .eq(
+          "order_id",
+          order.id,
+        )
+        .in(
+          "ticket_status",
+          [
+            "pending",
+            "active",
+          ],
+        );
+
+    if (
+      ticketUpdateError
+    ) {
       console.error(
         "Webhook ticket activation error:",
         ticketUpdateError,
@@ -698,20 +857,11 @@ export async function POST(request: Request) {
     }
 
     const emailDelivery =
-      await sendTicketEmailsForWebhook(
+      await sendTicketEmails(
         order.id,
         order.order_number,
       );
 
-    /*
-     * If SMTP or ticket-email generation
-     * completely failed, return a temporary
-     * server error. Paystack can retry the
-     * charge.success webhook. Payment and
-     * ticket updates above are idempotent,
-     * while the delivery table prevents
-     * duplicate emails.
-     */
     if (!emailDelivery) {
       return jsonResponse(
         {
@@ -726,25 +876,9 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * If one or more individual ticket
-     * emails failed, also allow Paystack
-     * to retry. Successfully sent tickets
-     * will be skipped by duplicate-delivery
-     * protection on the next attempt.
-     */
-    if (emailDelivery.failed > 0) {
-      console.error(
-        "EBBC2026 webhook completed with ticket email failures:",
-        {
-          reference,
-          orderNumber:
-            order.order_number,
-          failed:
-            emailDelivery.failed,
-        },
-      );
-
+    if (
+      emailDelivery.failed > 0
+    ) {
       return jsonResponse(
         {
           ok: false,
@@ -759,14 +893,89 @@ export async function POST(request: Request) {
       );
     }
 
+    let staffNotificationSent =
+      existingState
+        .staffNotificationSent;
+
+    if (
+      !staffNotificationSent
+    ) {
+      staffNotificationSent =
+        await sendStaffNotification(
+          {
+            orderId:
+              order.id,
+
+            orderNumber:
+              order.order_number,
+
+            reference,
+
+            amountKes:
+              expectedAmountKes,
+
+            currency:
+              expectedCurrency,
+
+            paymentMethod,
+
+            providerTransactionId,
+
+            paidAt,
+          },
+        );
+    }
+
+    const processedAt =
+      new Date().toISOString();
+
+    const {
+      error:
+        markerUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ebbc_payments",
+        )
+        .update({
+          provider_response: {
+            ...webhookEvent,
+
+            _ebbc: {
+              processed: true,
+              processedAt,
+              staffNotificationSent,
+            },
+          },
+        })
+        .eq(
+          "id",
+          payment.id,
+        );
+
+    if (
+      markerUpdateError
+    ) {
+      console.error(
+        "Could not save webhook processing marker:",
+        markerUpdateError,
+      );
+    }
+
     return jsonResponse({
       ok: true,
+
       message:
-        "The Paystack payment was confirmed, the EBBC2026 tickets were activated, and ticket email delivery was processed.",
+        "The Paystack payment was confirmed, tickets were activated, customer ticket emails were processed, and the Elevate payment notification was processed.",
+
       reference,
+
       orderNumber:
         order.order_number,
+
       emailDelivery,
+
+      staffNotificationSent,
     });
   } catch (error) {
     console.error(
