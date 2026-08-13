@@ -18,6 +18,7 @@ import {
   Ticket,
   UserRound,
   Users,
+  WalletCards,
 } from "lucide-react";
 
 import { useMemo, useState, type FormEvent } from "react";
@@ -356,15 +357,10 @@ export default function EBBC2026TicketsPage() {
         attendeeIndex === index
           ? {
               ...attendee,
-
               fullName: buyer.fullName,
-
               email: buyer.email,
-
               phone: buyer.phone,
-
               country: buyer.country || "Kenya",
-
               organisation: buyer.organisation,
             }
           : attendee,
@@ -526,7 +522,7 @@ export default function EBBC2026TicketsPage() {
 
       if (!response.ok || responseData.ok === false) {
         throw new Error(
-          responseData.message || "Payment instructions could not be opened.",
+          responseData.message || "Paystack checkout could not be opened.",
         );
       }
 
@@ -534,7 +530,7 @@ export default function EBBC2026TicketsPage() {
         responseData.authorizationUrl || responseData.authorization_url;
 
       if (!authorizationUrl) {
-        throw new Error("Payment instructions could not be opened.");
+        throw new Error("Paystack checkout could not be opened.");
       }
 
       window.location.href = authorizationUrl;
@@ -547,6 +543,20 @@ export default function EBBC2026TicketsPage() {
 
       setIsStartingPayment(false);
     }
+  }
+
+  function startInstallmentPayment() {
+    if (!createdOrder) {
+      return;
+    }
+
+    const params = new URLSearchParams({
+      order: createdOrder.orderNumber,
+      amount: String(createdOrder.totalAmountKes),
+      currency: createdOrder.currency,
+    });
+
+    window.location.href = `/ebbc2026/paybill?${params.toString()}`;
   }
 
   function resetRegistration() {
@@ -607,17 +617,16 @@ export default function EBBC2026TicketsPage() {
                 </p>
 
                 <h1 className="mt-3 [font-family:var(--font-display)] text-[44px] font-semibold leading-[0.94] tracking-[-0.045em] sm:text-[60px]">
-                  Details saved. Now
-                  <br className="hidden sm:block" /> clear your order balance.
+                  Registration saved.
+                  <br className="hidden sm:block" /> Choose how to pay.
                 </h1>
               </div>
             </div>
 
             <p className="mt-6 max-w-xl text-sm leading-7 text-white/60">
-              Your attendees and their selected event days are held under the
-              order below. Pay the full amount at once or in installments
-              through Equity Paybill. Tickets activate when the balance reaches
-              KES 0.
+              Pay the full order automatically through Paystack, or choose
+              Equity Paybill if you want to pay in installments. Your QR codes
+              activate when the full order balance has been cleared.
             </p>
           </div>
         </section>
@@ -660,9 +669,9 @@ export default function EBBC2026TicketsPage() {
                   </h2>
 
                   <p className="mt-2.5 text-[13px] leading-6 text-[#0D1D34]/55">
-                    Each ticket below admits one attendee on the single day shown
-                    on it, and stays inactive while any balance remains on this
-                    order.
+                    Each ticket admits one attendee on the single event day
+                    shown on it. QR codes remain inactive until the full order
+                    balance is cleared.
                   </p>
 
                   <div className="mt-5 space-y-3">
@@ -723,91 +732,126 @@ export default function EBBC2026TicketsPage() {
                 </div>
               ) : null}
 
-              <div className="mt-8 rounded-[24px] border border-[#0D1D34]/8 bg-[#FAF8F8] p-6">
-                <h2 className="text-sm font-extrabold">What happens next</h2>
+              <div className="mt-8">
+                <p className={LABEL_CLASS}>Choose payment option</p>
 
-                <ol className="mt-5 space-y-4">
-                  <li className="flex gap-4">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#0D1D34] text-[11px] font-black text-white">
-                      1
-                    </span>
+                <div className="mt-4 grid gap-4">
+                  <div className="rounded-[24px] border-2 border-[#CC8591] bg-[#CC8591]/6 p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#CC8591] text-white">
+                        <Smartphone className="h-5 w-5" />
+                      </div>
 
-                    <p className="text-[13px] leading-6 text-[#0D1D34]/70">
-                      Tap the button below to open the Equity Paybill
-                      instructions for order {createdOrder.orderNumber}.
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-base font-black">
+                            Pay in Full
+                          </h2>
+
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                            Automatic
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/60">
+                          Pay the full {createdOrder.currency}{" "}
+                          {formatMoney(createdOrder.totalAmountKes)} securely
+                          through Paystack using M-PESA or card. Successful
+                          payment is verified automatically and your tickets are
+                          activated.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={startPaystackPayment}
+                      disabled={isStartingPayment}
+                      className="group mt-6 inline-flex h-[58px] w-full items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white shadow-[0_18px_40px_rgba(204,133,145,0.30)] transition hover:-translate-y-0.5 hover:bg-[#0D1D34] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                    >
+                      {isStartingPayment ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          Opening Paystack
+                        </>
+                      ) : (
+                        <>
+                          Pay in Full with Paystack
+                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </>
+                      )}
+                    </button>
+
+                    <p className="mt-3 text-center text-[11px] font-bold text-[#0D1D34]/45">
+                      M-PESA or card &middot; automatic payment confirmation
                     </p>
-                  </li>
+                  </div>
 
-                  <li className="flex gap-4">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#0D1D34] text-[11px] font-black text-white">
-                      2
-                    </span>
+                  <div className="rounded-[24px] border border-[#0D1D34]/10 bg-[#FAF8F8] p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#0D1D34] text-white">
+                        <WalletCards className="h-5 w-5" />
+                      </div>
 
-                    <p className="text-[13px] leading-6 text-[#0D1D34]/70">
-                      Pay the full {createdOrder.currency}{" "}
-                      {formatMoney(createdOrder.totalAmountKes)} with M-Pesa, or
-                      pay in installments over time. There is no fixed number of
-                      payments.
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-base font-black">
+                            Pay in Installments
+                          </h2>
+
+                          <span className="rounded-full bg-[#0D1D34]/8 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0D1D34]/60">
+                            Mdogo mdogo
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/60">
+                          Pay any amount toward this order using the Equity
+                          Paybill. Each verified installment reduces your
+                          balance. Your QR codes activate when the remaining
+                          balance reaches KES 0.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={startInstallmentPayment}
+                      disabled={isStartingPayment}
+                      className="mt-6 inline-flex h-[56px] w-full items-center justify-center gap-3 rounded-full border border-[#0D1D34]/15 bg-white px-7 text-sm font-extrabold text-[#0D1D34] transition hover:border-[#0D1D34] hover:bg-[#0D1D34] hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-[#0D1D34]/15 disabled:opacity-50"
+                    >
+                      Pay in Installments
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+
+                    <p className="mt-3 text-center text-[11px] font-bold text-[#0D1D34]/45">
+                      Equity Paybill &middot; partial payments accepted
                     </p>
-                  </li>
-
-                  <li className="flex gap-4">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#0D1D34] text-[11px] font-black text-white">
-                      3
-                    </span>
-
-                    <p className="text-[13px] leading-6 text-[#0D1D34]/70">
-                      Every installment is verified against this same order, so
-                      always use the paybill details shown for order{" "}
-                      {createdOrder.orderNumber}. Your balance reduces with each
-                      verified payment.
-                    </p>
-                  </li>
-
-                  <li className="flex gap-4">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#CC8591] text-[11px] font-black text-white">
-                      4
-                    </span>
-
-                    <p className="text-[13px] leading-6 text-[#0D1D34]/70">
-                      While any balance remains, the QR codes stay inactive. When
-                      the order balance reaches {createdOrder.currency} 0, the QR
-                      codes activate and the tickets are emailed out, each valid
-                      for one attendee on its own selected day.
-                    </p>
-                  </li>
-                </ol>
+                  </div>
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={startPaystackPayment}
-                disabled={isStartingPayment}
-                className="group mt-7 inline-flex h-[60px] w-full items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white shadow-[0_18px_40px_rgba(204,133,145,0.30)] transition hover:-translate-y-0.5 hover:bg-[#0D1D34] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-              >
-                {isStartingPayment ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Opening payment instructions
-                  </>
-                ) : (
-                  <>
-                    Continue to Payment
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </button>
+              <div className="mt-8 rounded-[24px] border border-[#0D1D34]/8 bg-[#FAF8F8] p-6">
+                <h2 className="text-sm font-extrabold">
+                  When do the tickets activate?
+                </h2>
 
-              <p className="mt-4 text-center text-[12px] leading-6 text-[#0D1D34]/45">
-                Pay the full order total now or in installments. Nothing is
-                charged from this page.
-              </p>
+                <div className="mt-4 flex items-start gap-3">
+                  <QrCode className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
+
+                  <p className="text-[13px] leading-6 text-[#0D1D34]/65">
+                    Whether you pay in full through Paystack or use
+                    installments, the QR codes become active only when the
+                    entire order balance has been cleared. The ticket email is
+                    then sent to the registered attendee.
+                  </p>
+                </div>
+              </div>
 
               <button
                 type="button"
                 onClick={resetRegistration}
                 disabled={isStartingPayment}
-                className="mt-4 inline-flex h-[54px] w-full items-center justify-center rounded-full border border-[#0D1D34]/15 bg-white px-7 text-sm font-extrabold transition-colors hover:border-[#0D1D34] hover:bg-[#0D1D34] hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-[#0D1D34]/15 disabled:opacity-50"
+                className="mt-6 inline-flex h-[54px] w-full items-center justify-center rounded-full border border-[#0D1D34]/15 bg-white px-7 text-sm font-extrabold transition-colors hover:border-[#0D1D34] hover:bg-[#0D1D34] hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-[#0D1D34]/15 disabled:opacity-50"
               >
                 Start another registration
               </button>
@@ -820,14 +864,13 @@ export default function EBBC2026TicketsPage() {
 
                   <div>
                     <p className="text-sm font-extrabold">
-                      Full payment or installments
+                      Full payment
                     </p>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
-                      Continue to the Equity Paybill instructions and pay with
-                      M-Pesa. You may clear the order total in one payment or in
-                      installments, and every installment is verified against
-                      this order.
+                      Paystack verifies successful full payments automatically.
+                      Once confirmed, the order is marked paid and the ticket QR
+                      codes activate.
                     </p>
                   </div>
                 </div>
@@ -835,13 +878,31 @@ export default function EBBC2026TicketsPage() {
                 <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-[#0D1D34]/8 pt-5 text-[11px] font-bold text-[#0D1D34]/45">
                   <span className="inline-flex items-center gap-2">
                     <Smartphone className="h-4 w-4 text-[#CC8591]" />
-                    M-Pesa
+                    M-PESA
                   </span>
 
                   <span className="inline-flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-[#CC8591]" />
-                    Payment verification
+                    Paystack
                   </span>
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-[#0D1D34]/8 bg-white p-6">
+                <div className="flex items-start gap-3">
+                  <WalletCards className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
+
+                  <div>
+                    <p className="text-sm font-extrabold">
+                      Installment option
+                    </p>
+
+                    <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
+                      Customers who want to pay mdogo mdogo can use the Equity
+                      Paybill option. Each payment is recorded against the same
+                      order until the balance is cleared.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -851,14 +912,13 @@ export default function EBBC2026TicketsPage() {
 
                   <div>
                     <p className="text-sm font-extrabold">
-                      QR activates at KES 0 balance
+                      One QR, one selected day
                     </p>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
-                      Tickets are emailed and QR codes go live only once the full
-                      order balance is cleared. Each QR admits one attendee on
-                      the one day shown on that ticket, so attending both days
-                      needs two tickets.
+                      Each QR admits one attendee on the event day printed on
+                      that ticket. Attending both convention days requires two
+                      tickets.
                     </p>
                   </div>
                 </div>
@@ -918,7 +978,7 @@ export default function EBBC2026TicketsPage() {
 
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[11px] font-bold text-white/75">
                   <CreditCard className="h-4 w-4 text-[#CC8591]" />
-                  Pay in full or in installments
+                  Full payment or installments
                 </span>
 
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[11px] font-bold text-white/75">
@@ -945,7 +1005,7 @@ export default function EBBC2026TicketsPage() {
                 </p>
 
                 <p className="mt-1.5 text-[13px] font-extrabold text-white/60">
-                  Pay in full or in installments
+                  Choose payment method
                 </p>
               </li>
 
@@ -955,7 +1015,7 @@ export default function EBBC2026TicketsPage() {
                 </p>
 
                 <p className="mt-1.5 text-[13px] font-extrabold text-white/60">
-                  QR activates at KES 0 balance
+                  Receive active QR ticket
                 </p>
               </li>
             </ol>
@@ -1431,10 +1491,9 @@ export default function EBBC2026TicketsPage() {
                 </button>
 
                 <p className="mt-4 hidden text-center text-[12px] leading-6 text-[#0D1D34]/45 lg:block">
-                  Next you will see Equity Paybill instructions for this order.
-                  Pay the order total in one payment or in installments. QR codes
-                  activate and tickets are emailed only when the balance reaches
-                  KES 0.
+                  Your order will be created first. You will then choose either
+                  full payment through Paystack or installment payment through
+                  Equity Paybill.
                 </p>
               </div>
             </form>
@@ -1498,7 +1557,9 @@ export default function EBBC2026TicketsPage() {
                         {quantity}
                       </p>
 
-                      <p className="mt-1 text-sm font-extrabold">Day ticket</p>
+                      <p className="mt-1 text-sm font-extrabold">
+                        Day ticket
+                      </p>
                     </div>
 
                     <p className="text-base font-extrabold tabular-nums">
@@ -1513,7 +1574,7 @@ export default function EBBC2026TicketsPage() {
                       </p>
 
                       <p className="mt-1 text-[13px] text-white/50">
-                        Payable in full or in installments
+                        Full payment or installments
                       </p>
                     </div>
 
@@ -1543,8 +1604,8 @@ export default function EBBC2026TicketsPage() {
                       <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-[#CC8591]" />
 
                       <span>
-                        Pay the order total at once or in installments, all
-                        verified against the same order.
+                        Pay in full automatically with Paystack, or choose
+                        Equity Paybill for installments.
                       </span>
                     </div>
 
@@ -1552,8 +1613,8 @@ export default function EBBC2026TicketsPage() {
                       <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-[#CC8591]" />
 
                       <span>
-                        QR codes stay inactive until the balance reaches KES 0,
-                        then tickets are emailed out.
+                        QR codes activate when the complete order balance has
+                        been cleared.
                       </span>
                     </div>
                   </div>
@@ -1570,11 +1631,9 @@ export default function EBBC2026TicketsPage() {
                     </p>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
-                      Saving your details reserves the tickets and creates an
-                      order number. You then pay with M-Pesa through the Equity
-                      Paybill instructions, in full or in installments. Every
-                      installment is verified against that same order, and QR
-                      codes activate only when the balance reaches KES 0.
+                      Saving your details creates the registration order. On the
+                      next screen you choose Paystack for full payment or Equity
+                      Paybill if you want to pay in installments.
                     </p>
                   </div>
                 </div>
@@ -1582,12 +1641,12 @@ export default function EBBC2026TicketsPage() {
                 <div className="mt-5 flex items-center gap-5 border-t border-[#0D1D34]/8 pt-5 text-[11px] font-bold text-[#0D1D34]/45">
                   <span className="inline-flex items-center gap-2">
                     <Smartphone className="h-4 w-4 text-[#CC8591]" />
-                    M-Pesa
+                    Paystack
                   </span>
 
                   <span className="inline-flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-[#CC8591]" />
-                    Equity Paybill
+                    <WalletCards className="h-4 w-4 text-[#CC8591]" />
+                    Installments
                   </span>
                 </div>
               </div>
