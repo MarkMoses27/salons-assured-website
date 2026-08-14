@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckCircle2,
   CreditCard,
+  Download,
   Eye,
   Loader2,
   LockKeyhole,
@@ -133,29 +134,16 @@ type RegistrationRow = {
   paymentMethod: string;
   paymentCount: number;
 
-  lastPaymentReference:
-    | string
-    | null;
-
-  lastPaymentAt:
-    | string
-    | null;
+  lastPaymentReference: string | null;
+  lastPaymentAt: string | null;
 
   checkInStatus:
     | "checked_in"
     | "not_checked_in";
 
-  lastCheckInAt:
-    | string
-    | null;
-
-  lastCheckInGate:
-    | string
-    | null;
-
-  lastScanResult:
-    | string
-    | null;
+  lastCheckInAt: string | null;
+  lastCheckInGate: string | null;
+  lastScanResult: string | null;
 };
 
 type DashboardResponse = {
@@ -175,42 +163,22 @@ type DetailPayment = {
   id: string;
   provider: string | null;
   paymentMethod: string;
-  transactionReference:
-    | string
-    | null;
-  providerTransactionId:
-    | string
-    | null;
+  transactionReference: string | null;
+  providerTransactionId: string | null;
   amountKes: number;
   currency: string;
-  paymentStatus:
-    | string
-    | null;
-  paidAt:
-    | string
-    | null;
-  verifiedAt:
-    | string
-    | null;
-  createdAt:
-    | string
-    | null;
+  paymentStatus: string | null;
+  paidAt: string | null;
+  verifiedAt: string | null;
+  createdAt: string | null;
 };
 
 type DetailCheckIn = {
   id: string;
-  scanResult:
-    | string
-    | null;
-  gateName:
-    | string
-    | null;
-  eventDate:
-    | string
-    | null;
-  scannedAt:
-    | string
-    | null;
+  scanResult: string | null;
+  gateName: string | null;
+  eventDate: string | null;
+  scannedAt: string | null;
 };
 
 type DetailTicket = {
@@ -218,31 +186,15 @@ type DetailTicket = {
   ticketNumber: string;
   attendeeFullName: string;
   attendeeEmail: string;
-  attendeePhone:
-    | string
-    | null;
-  participantCategory:
-    | string
-    | null;
-  organisation:
-    | string
-    | null;
-  country:
-    | string
-    | null;
-  eventDate:
-    | string
-    | null;
-  ticketStatus:
-    | string
-    | null;
+  attendeePhone: string | null;
+  participantCategory: string | null;
+  organisation: string | null;
+  country: string | null;
+  eventDate: string | null;
+  ticketStatus: string | null;
   qrStatus: string;
-  issuedAt:
-    | string
-    | null;
-  createdAt:
-    | string
-    | null;
+  issuedAt: string | null;
+  createdAt: string | null;
   checkInCount: number;
   checkIns: DetailCheckIn[];
 };
@@ -253,30 +205,18 @@ type DetailOrder = {
   buyerFullName: string;
   buyerEmail: string;
   buyerPhone: string;
-  buyerCountry:
-    | string
-    | null;
-  buyerOrganisation:
-    | string
-    | null;
+  buyerCountry: string | null;
+  buyerOrganisation: string | null;
   ticketQuantity: number;
   totalAmountKes: number;
   totalPaidKes: number;
   balanceKes: number;
   paymentState: PaymentState;
   currency: string;
-  orderStatus:
-    | string
-    | null;
-  storedPaymentStatus:
-    | string
-    | null;
-  createdAt:
-    | string
-    | null;
-  paidAt:
-    | string
-    | null;
+  orderStatus: string | null;
+  storedPaymentStatus: string | null;
+  createdAt: string | null;
+  paidAt: string | null;
 };
 
 type DetailsResponse = {
@@ -327,8 +267,7 @@ function formatDate(
     return "—";
   }
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
   if (
     Number.isNaN(
@@ -360,8 +299,7 @@ function formatDateTime(
     return "—";
   }
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
   if (
     Number.isNaN(
@@ -551,6 +489,28 @@ function nameTermMatches(
   );
 }
 
+function csvCell(
+  value: unknown,
+) {
+  let text =
+    String(value ?? "");
+
+  /*
+   * Prevent spreadsheet formula execution
+   * when CSV values are opened in Excel.
+   */
+  if (
+    /^[=+\-@]/.test(text)
+  ) {
+    text = `'${text}`;
+  }
+
+  return `"${text.replace(
+    /"/g,
+    '""',
+  )}"`;
+}
+
 function PaymentBadge({
   state,
 }: {
@@ -663,6 +623,13 @@ function DetailValue({
     | null
     | undefined;
 }) {
+  const displayValue =
+    value === null ||
+    value === undefined ||
+    value === ""
+      ? "—"
+      : value;
+
   return (
     <div>
       <div className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0D1D34]/35">
@@ -670,7 +637,7 @@ function DetailValue({
       </div>
 
       <div className="mt-1 break-words text-xs font-black text-[#0D1D34]">
-        {value || "—"}
+        {displayValue}
       </div>
     </div>
   );
@@ -1276,7 +1243,6 @@ export default function EBBC2026PaymentAdminPage() {
     );
 
     setDetails(null);
-
     setDetailsError("");
   }
 
@@ -1496,7 +1462,6 @@ export default function EBBC2026PaymentAdminPage() {
     );
 
     setDetailsError("");
-
     setDetails(null);
 
     try {
@@ -1719,6 +1684,265 @@ export default function EBBC2026PaymentAdminPage() {
         paymentFilter,
       ],
     );
+
+  function handleExportCsv() {
+    if (
+      filteredRows.length ===
+      0
+    ) {
+      return;
+    }
+
+    /*
+     * One CSV row per ORDER rather than per ticket.
+     * This prevents order money being duplicated
+     * when one order contains multiple attendees.
+     */
+    const orders =
+      new Map<
+        string,
+        {
+          first:
+            RegistrationRow;
+          rows:
+            RegistrationRow[];
+        }
+      >();
+
+    for (
+      const row
+      of filteredRows
+    ) {
+      const existing =
+        orders.get(
+          row.orderId,
+        );
+
+      if (existing) {
+        existing.rows.push(
+          row,
+        );
+      } else {
+        orders.set(
+          row.orderId,
+          {
+            first: row,
+            rows: [row],
+          },
+        );
+      }
+    }
+
+    const headers = [
+      "Order Number",
+      "Registration Date",
+      "Buyer Name",
+      "Buyer Phone",
+      "Buyer Email",
+      "Buyer Organisation",
+      "Buyer Country",
+      "Payment Status",
+      "Order Total KES",
+      "Total Paid KES",
+      "Balance KES",
+      "Payment Method",
+      "Payment Count",
+      "Last Payment Reference",
+      "Last Payment Date",
+      "Ticket Count",
+      "Ticket Numbers",
+      "Attendee Names",
+      "Event Days",
+      "Participant Categories",
+      "QR Status",
+      "Check-In Status",
+      "Last Check-In",
+      "Last Check-In Gate",
+    ];
+
+    const csvRows =
+      Array.from(
+        orders.values(),
+      ).map(
+        ({
+          first,
+          rows,
+        }) => {
+          const unique =
+            (
+              values: Array<
+                string | null
+              >,
+            ) =>
+              Array.from(
+                new Set(
+                  values.filter(
+                    (
+                      value,
+                    ): value is string =>
+                      Boolean(value),
+                  ),
+                ),
+              ).join(" | ");
+
+          const qrStatus =
+            unique(
+              rows.map(
+                (row) =>
+                  row.qrStatus,
+              ),
+            );
+
+          const checkInStatus =
+            unique(
+              rows.map(
+                (row) =>
+                  row.checkInStatus ===
+                  "checked_in"
+                    ? "Checked In"
+                    : "Not Checked In",
+              ),
+            );
+
+          const attendeeNames =
+            unique(
+              rows.map(
+                (row) =>
+                  row.attendeeFullName,
+              ),
+            );
+
+          const ticketNumbers =
+            unique(
+              rows.map(
+                (row) =>
+                  row.ticketNumber,
+              ),
+            );
+
+          const eventDays =
+            unique(
+              rows.map(
+                (row) =>
+                  formatEventDate(
+                    row.eventDate,
+                  ),
+              ),
+            );
+
+          const categories =
+            unique(
+              rows.map(
+                (row) =>
+                  row.participantCategory,
+              ),
+            );
+
+          return [
+            first.orderNumber,
+            formatDateTime(
+              first.orderCreatedAt,
+            ),
+            first.buyerFullName,
+            `‌${first.buyerPhone}`,
+            first.buyerEmail,
+            first.buyerOrganisation,
+            first.buyerCountry,
+            first.paymentState.toUpperCase(),
+            first.totalAmountKes,
+            first.amountPaidKes,
+            first.balanceKes,
+            first.paymentMethod,
+            first.paymentCount,
+            first.lastPaymentReference,
+            formatDateTime(
+              first.lastPaymentAt,
+            ),
+            rows.length,
+            ticketNumbers,
+            attendeeNames,
+            eventDays,
+            categories,
+            qrStatus,
+            checkInStatus,
+            formatDateTime(
+              first.lastCheckInAt,
+            ),
+            first.lastCheckInGate,
+          ];
+        },
+      );
+
+    const csv =
+      [
+        headers
+          .map(csvCell)
+          .join(","),
+
+        ...csvRows.map(
+          (row) =>
+            row
+              .map(csvCell)
+              .join(","),
+        ),
+      ].join("\r\n");
+
+    const blob =
+      new Blob(
+        [
+          "\uFEFF",
+          csv,
+        ],
+        {
+          type:
+            "text/csv;charset=utf-8",
+        },
+      );
+
+    const downloadUrl =
+      URL.createObjectURL(
+        blob,
+      );
+
+    const link =
+      document.createElement(
+        "a",
+      );
+
+    const dateStamp =
+      new Date()
+        .toLocaleDateString(
+          "en-CA",
+          {
+            timeZone:
+              "Africa/Nairobi",
+          },
+        )
+        .replace(
+          /\//g,
+          "-",
+        );
+
+    link.href =
+      downloadUrl;
+
+    link.download =
+      `EBBC2026-registrations-${dateStamp}.csv`;
+
+    document.body.appendChild(
+      link,
+    );
+
+    link.click();
+
+    document.body.removeChild(
+      link,
+    );
+
+    URL.revokeObjectURL(
+      downloadUrl,
+    );
+  }
 
   if (
     authState ===
@@ -1947,7 +2171,23 @@ export default function EBBC2026PaymentAdminPage() {
                       : ""
                   }`}
                 />
+
                 Refresh
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  handleExportCsv
+                }
+                disabled={
+                  filteredRows.length ===
+                  0
+                }
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#0D1D34]/10 bg-white px-5 text-xs font-black shadow-sm transition hover:border-[#CC8591] hover:text-[#CC8591] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
               </button>
 
               <button
@@ -2007,6 +2247,7 @@ export default function EBBC2026PaymentAdminPage() {
                 <span className="text-sm text-[#0D1D34]/40">
                   KES{" "}
                 </span>
+
                 {formatMoney(
                   summary.receivedKes,
                 )}
@@ -2035,6 +2276,7 @@ export default function EBBC2026PaymentAdminPage() {
                 <span className="text-sm text-[#0D1D34]/40">
                   KES{" "}
                 </span>
+
                 {formatMoney(
                   summary.outstandingKes,
                 )}
@@ -2140,7 +2382,7 @@ export default function EBBC2026PaymentAdminPage() {
             </button>
           </div>
 
-          <section className="mt-8 rounded-[28px] border border-[#0D1D34]/7 bg-white shadow-[0_20px_60px_rgba(13,29,52,0.06)]">
+          <section className="mt-8 overflow-hidden rounded-[28px] border border-[#0D1D34]/7 bg-white shadow-[0_20px_60px_rgba(13,29,52,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[#0D1D34]/7 p-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-lg font-black">
@@ -2214,6 +2456,21 @@ export default function EBBC2026PaymentAdminPage() {
                     Unpaid
                   </option>
                 </select>
+
+                <button
+                  type="button"
+                  onClick={
+                    handleExportCsv
+                  }
+                  disabled={
+                    filteredRows.length ===
+                    0
+                  }
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#0D1D34] px-5 text-xs font-black text-white transition hover:bg-[#172c4c] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Download className="h-4 w-4" />
+                  Export
+                </button>
               </div>
             </div>
 
@@ -2257,7 +2514,7 @@ export default function EBBC2026PaymentAdminPage() {
             ) : (
               <>
                 <div className="hidden overflow-x-auto xl:block">
-                  <table className="min-w-[1880px] w-full border-collapse text-left">
+                  <table className="w-full min-w-[1880px] border-collapse text-left">
                     <thead>
                       <tr className="bg-[#F8F7F7] text-[9px] font-black uppercase tracking-[0.12em] text-[#0D1D34]/40">
                         <th className="px-5 py-4">
@@ -2304,7 +2561,7 @@ export default function EBBC2026PaymentAdminPage() {
                           Last Payment
                         </th>
 
-                        <th className="px-5 py-4">
+                        <th className="sticky right-0 z-30 min-w-[130px] bg-[#F8F7F7] px-5 py-4 shadow-[-14px_0_24px_rgba(13,29,52,0.06)]">
                           Details
                         </th>
                       </tr>
@@ -2317,7 +2574,7 @@ export default function EBBC2026PaymentAdminPage() {
                             key={
                               row.ticketId
                             }
-                            className="border-t border-[#0D1D34]/6 align-top transition hover:bg-[#FCFBFB]"
+                            className="group border-t border-[#0D1D34]/6 align-top transition hover:bg-[#FCFBFB]"
                           >
                             <td className="px-5 py-5">
                               <div className="max-w-[210px]">
@@ -2472,7 +2729,7 @@ export default function EBBC2026PaymentAdminPage() {
                               </div>
                             </td>
 
-                            <td className="px-5 py-5">
+                            <td className="sticky right-0 z-20 bg-white px-5 py-5 shadow-[-14px_0_24px_rgba(13,29,52,0.06)] transition group-hover:bg-[#FCFBFB]">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -3278,6 +3535,7 @@ export default function EBBC2026PaymentAdminPage() {
                                         {formatDateTime(
                                           checkIn.scannedAt,
                                         )}
+
                                         {checkIn.gateName
                                           ? ` · ${checkIn.gateName}`
                                           : ""}
