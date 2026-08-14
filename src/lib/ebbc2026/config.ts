@@ -20,9 +20,29 @@ export const EBBC2026 = {
 
   ticket: {
     name: "EBBC2026 Day Ticket",
+
+    /*
+     * Normal ticket price.
+     * Kept as priceKes for backwards compatibility
+     * with any existing EBBC2026 components.
+     */
     priceKes: 4500,
+    standardPriceKes: 4500,
     currency: "KES",
     displayPrice: "KES 4,500",
+
+    earlyBird: {
+      priceKes: 4000,
+      displayPrice: "KES 4,000",
+
+      /*
+       * 31 August 2026 at 11:59:59 PM
+       * East Africa Time (UTC+3).
+       */
+      endsAt: "2026-08-31T20:59:59.999Z",
+
+      deadlineDisplay: "31 August 2026",
+    },
 
     includes: [
       "Access to one selected convention day",
@@ -71,6 +91,36 @@ export const EBBC2026 = {
     referralCommissionConfirmed: false,
   },
 } as const;
+
+export function isEBBCEarlyBirdActive(
+  now: Date = new Date(),
+) {
+  const deadline = Date.parse(
+    EBBC2026.ticket.earlyBird.endsAt,
+  );
+
+  return now.getTime() <= deadline;
+}
+
+export function getEBBCTicketPriceKes(
+  now: Date = new Date(),
+) {
+  if (isEBBCEarlyBirdActive(now)) {
+    return EBBC2026.ticket.earlyBird.priceKes;
+  }
+
+  return EBBC2026.ticket.standardPriceKes;
+}
+
+export function getEBBCTicketDisplayPrice(
+  now: Date = new Date(),
+) {
+  if (isEBBCEarlyBirdActive(now)) {
+    return EBBC2026.ticket.earlyBird.displayPrice;
+  }
+
+  return EBBC2026.ticket.displayPrice;
+}
 
 export type EBBCParticipantCategory =
   (typeof EBBC2026.participantCategories)[number];

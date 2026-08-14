@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import {
+  getEBBCTicketDisplayPrice,
+  isEBBCEarlyBirdActive,
+} from "@/lib/ebbc2026/config";
+
 const storageKey =
   "sak-ebbc2026-banner-dismissed";
 
@@ -151,6 +156,9 @@ export default function EBBCFloatingBanner() {
     },
   ];
 
+  const earlyBirdActive = isEBBCEarlyBirdActive();
+  const currentTicketPrice = getEBBCTicketDisplayPrice();
+
   const buttonText =
     eventStatus === "upcoming"
       ? "Secure Your Seat"
@@ -206,11 +214,11 @@ export default function EBBCFloatingBanner() {
 
             <div className="rounded-[13px] border border-white/10 bg-white/[0.07] px-3 py-2 text-right">
               <p className="text-[7px] font-bold uppercase tracking-[0.14em] text-white/40">
-                Full Pass
+                {earlyBirdActive ? "Early Bird" : "Day Ticket"}
               </p>
 
               <p className="mt-1 whitespace-nowrap text-[13px] font-extrabold text-[#CC8591]">
-                KES 4,500
+                {currentTicketPrice}
               </p>
             </div>
           </div>

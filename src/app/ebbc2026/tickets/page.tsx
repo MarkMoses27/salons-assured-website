@@ -23,7 +23,11 @@ import {
 
 import { useMemo, useState, type FormEvent } from "react";
 
-import { EBBC2026 } from "@/lib/ebbc2026/config";
+import {
+  EBBC2026,
+  getEBBCTicketPriceKes,
+  isEBBCEarlyBirdActive,
+} from "@/lib/ebbc2026/config";
 
 const participantCategories = EBBC2026.participantCategories;
 
@@ -202,7 +206,7 @@ function normaliseCreatedOrder(
     order?.unitPriceKes ??
       order?.unit_price_kes ??
       response.unitPriceKes ??
-      EBBC2026.ticket.priceKes,
+      getEBBCTicketPriceKes(),
   );
 
   const totalAmountKes = Number(
@@ -233,7 +237,7 @@ function normaliseCreatedOrder(
     unitPriceKes:
       Number.isFinite(unitPriceKes) && unitPriceKes > 0
         ? unitPriceKes
-        : EBBC2026.ticket.priceKes,
+        : getEBBCTicketPriceKes(),
 
     totalAmountKes:
       Number.isFinite(totalAmountKes) && totalAmountKes > 0
@@ -296,8 +300,10 @@ export default function EBBC2026TicketsPage() {
 
   const quantity = attendees.length;
 
+  const earlyBirdActive = isEBBCEarlyBirdActive();
+
   const totalAmount = useMemo(
-    () => quantity * EBBC2026.ticket.priceKes,
+    () => quantity * getEBBCTicketPriceKes(),
     [quantity],
   );
 
@@ -970,6 +976,21 @@ export default function EBBC2026TicketsPage() {
                 days needs two tickets, one for each day.
               </p>
 
+              {earlyBirdActive ? (
+                <div className="mt-7 flex w-fit flex-wrap items-center gap-3 rounded-2xl border border-[#CC8591]/40 bg-[#CC8591]/12 px-5 py-4">
+                  <BadgeCheck className="h-5 w-5 text-[#CC8591]" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#CC8591]">
+                    Early Bird
+                  </span>
+                  <span className="text-xl font-black text-white">
+                    {EBBC2026.ticket.earlyBird.displayPrice}
+                  </span>
+                  <span className="text-[12px] font-bold text-white/55">
+                    until {EBBC2026.ticket.earlyBird.deadlineDisplay}
+                  </span>
+                </div>
+              ) : null}
+
               <div className="mt-9 flex flex-wrap gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[11px] font-bold text-white/75">
                   <CalendarDays className="h-4 w-4 text-[#CC8591]" />
@@ -1510,9 +1531,28 @@ export default function EBBC2026TicketsPage() {
                   </h2>
 
                   <p className="mt-4 text-[13px] leading-6 text-white/55">
-                    KES {formatMoney(EBBC2026.ticket.priceKes)} for one attendee
+                    KES {formatMoney(getEBBCTicketPriceKes())} for one attendee
                     on one selected day.
                   </p>
+
+                  {earlyBirdActive ? (
+                    <div className="mt-4 rounded-2xl border border-[#CC8591]/30 bg-[#CC8591]/10 p-4">
+                      <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#CC8591]">
+                        Early Bird Offer
+                      </p>
+                      <div className="mt-2 flex items-end gap-3">
+                        <span className="text-2xl font-black text-white">
+                          KES {formatMoney(EBBC2026.ticket.earlyBird.priceKes)}
+                        </span>
+                        <span className="pb-0.5 text-sm font-bold text-white/35 line-through">
+                          KES {formatMoney(EBBC2026.ticket.standardPriceKes)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[11px] font-bold text-white/50">
+                        Valid through 31 August 2026, 11:59 PM EAT.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="px-7 py-6">
@@ -1553,7 +1593,7 @@ export default function EBBC2026TicketsPage() {
                   <div className="flex items-center justify-between border-b border-white/10 py-5">
                     <div>
                       <p className="text-[12px] font-bold text-white/55 tabular-nums">
-                        KES {formatMoney(EBBC2026.ticket.priceKes)} &times;{" "}
+                        KES {formatMoney(getEBBCTicketPriceKes())} &times;{" "}
                         {quantity}
                       </p>
 

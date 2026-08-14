@@ -17,7 +17,13 @@ import {
 } from "lucide-react";
 
 import EventCountdown from "./EventCountdown";
-import { EBBC2026 } from "@/lib/ebbc2026/config";
+import {
+  EBBC2026,
+  getEBBCTicketDisplayPrice,
+  isEBBCEarlyBirdActive,
+} from "@/lib/ebbc2026/config";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title:
@@ -147,9 +153,9 @@ const faqs = [
   },
   {
     question:
-      "What does the KES 4,500 ticket include?",
+      "What does the EBBC2026 day ticket include?",
     answer:
-      "Each KES 4,500 ticket admits one attendee on one selected event day — either 17 November or 18 November 2026. It includes that day’s keynotes and panel discussions, exhibition and supplier access, networking sessions, a digital programme, a QR-code ticket and a participation certificate. Attending both days requires two tickets.",
+      "Each ticket admits one attendee on one selected event day — either 17 November or 18 November 2026. It includes that day’s keynotes and panel discussions, exhibition and supplier access, networking sessions, a digital programme, a QR-code ticket and a participation certificate. Attending both days requires two tickets.",
   },
   {
     question:
@@ -172,6 +178,9 @@ const faqs = [
 ];
 
 export default function EBBC2026Page() {
+  const currentTicketPrice = getEBBCTicketDisplayPrice();
+  const earlyBirdActive = isEBBCEarlyBirdActive();
+
   return (
     <main className="overflow-hidden bg-white text-[#0D1D34]">
       {/* HERO */}
@@ -237,7 +246,7 @@ export default function EBBC2026Page() {
                 </p>
 
                 <p className="mt-1.5 text-sm font-extrabold text-[#CC8591]">
-                  {EBBC2026.ticket.displayPrice}
+                  {currentTicketPrice}
                 </p>
               </div>
             </div>
@@ -285,7 +294,7 @@ export default function EBBC2026Page() {
                   </span>
 
                   <span className="rounded-full bg-[#CC8591] px-4 py-2 text-[9px] font-extrabold uppercase tracking-[0.16em] text-white">
-                    KES 4,500
+                    {currentTicketPrice}
                   </span>
                 </div>
 
@@ -503,7 +512,7 @@ export default function EBBC2026Page() {
             </p>
 
             <h2 className="mt-5 [font-family:var(--font-display)] text-[48px] font-semibold leading-[0.95] tracking-[-0.045em] sm:text-[66px]">
-              Choose Your Day for KES 4,500
+              {earlyBirdActive ? "Early Bird - KES 4,000" : "Choose Your Day - KES 4,500"}
             </h2>
 
             <p className="mt-6 max-w-xl text-[15px] leading-8 text-[#0D1D34]/60">
@@ -533,7 +542,7 @@ export default function EBBC2026Page() {
                   </p>
 
                   <p className="mt-1 text-3xl font-black text-[#CC8591]">
-                    KES 4,500
+                    {currentTicketPrice}
                   </p>
                 </div>
               </div>
@@ -694,7 +703,7 @@ export default function EBBC2026Page() {
                 href={EBBC2026.routes.tickets}
                 className="group inline-flex h-14 items-center justify-center gap-3 rounded-full bg-[#CC8591] px-8 text-sm font-extrabold text-white transition hover:bg-white hover:text-[#0D1D34]"
               >
-                Choose Your Day — KES 4,500
+                Choose Your Day — {currentTicketPrice}
 
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
