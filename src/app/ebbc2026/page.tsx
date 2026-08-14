@@ -149,7 +149,7 @@ const faqs = [
     question:
       "What does the KES 4,500 ticket include?",
     answer:
-      "The Full Convention Pass includes access to both convention days, keynotes and panel discussions, exhibition and supplier access, networking sessions, a digital programme, a QR-code ticket and a participation certificate.",
+      "Each KES 4,500 ticket admits one attendee on one selected event day — either 17 November or 18 November 2026. It includes that day’s keynotes and panel discussions, exhibition and supplier access, networking sessions, a digital programme, a QR-code ticket and a participation certificate. Attending both days requires two tickets.",
   },
   {
     question:
@@ -233,7 +233,7 @@ export default function EBBC2026Page() {
                 <Ticket className="h-5 w-5 text-[#CC8591]" />
 
                 <p className="mt-3 text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#0D1D34]/40">
-                  Full convention pass
+                  Single-day ticket
                 </p>
 
                 <p className="mt-1.5 text-sm font-extrabold text-[#CC8591]">
@@ -382,7 +382,7 @@ export default function EBBC2026Page() {
                 href={EBBC2026.routes.tickets}
                 className="group mt-8 inline-flex h-[52px] items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-[#0D1D34]"
               >
-                Get Your Convention Pass
+                Get Your EBBC2026 Ticket
 
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
@@ -499,17 +499,18 @@ export default function EBBC2026Page() {
         <div className="mx-auto grid max-w-[1200px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <p className="text-[9px] font-extrabold uppercase tracking-[0.26em] text-[#CC8591]">
-              One complete convention pass
+              One attendee · one selected day
             </p>
 
             <h2 className="mt-5 [font-family:var(--font-display)] text-[48px] font-semibold leading-[0.95] tracking-[-0.045em] sm:text-[66px]">
-              Access Both Days for KES 4,500
+              Choose Your Day for KES 4,500
             </h2>
 
             <p className="mt-6 max-w-xl text-[15px] leading-8 text-[#0D1D34]/60">
-              One pass gives you access to the full
-              EBBC2026 learning, networking and
-              industry experience.
+              Each ticket is valid for one attendee
+              on one selected event day. To attend
+              both dates, buy two tickets and select
+              one date for each.
             </p>
           </div>
 
@@ -522,13 +523,13 @@ export default function EBBC2026Page() {
                   </p>
 
                   <h3 className="mt-2 text-2xl font-extrabold">
-                    Full Convention Pass
+                    EBBC2026 Day Ticket
                   </h3>
                 </div>
 
                 <div className="text-right">
                   <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/40">
-                    Per person
+                    Per attendee · selected day
                   </p>
 
                   <p className="mt-1 text-3xl font-black text-[#CC8591]">
@@ -562,7 +563,7 @@ export default function EBBC2026Page() {
                 href={EBBC2026.routes.tickets}
                 className="group mt-8 inline-flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white transition hover:bg-white hover:text-[#0D1D34]"
               >
-                Register for EBBC2026
+                Choose Your Event Day
 
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
@@ -682,9 +683,10 @@ export default function EBBC2026Page() {
             <p className="mx-auto mt-6 max-w-2xl text-[14px] leading-7 text-white/55">
               Join professionals, owners,
               suppliers, investors and industry
-              leaders for two powerful days of
+              leaders across two powerful days of
               learning, networking and business
-              growth.
+              growth. Choose the event day that
+              matches your ticket.
             </p>
 
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
@@ -692,7 +694,7 @@ export default function EBBC2026Page() {
                 href={EBBC2026.routes.tickets}
                 className="group inline-flex h-14 items-center justify-center gap-3 rounded-full bg-[#CC8591] px-8 text-sm font-extrabold text-white transition hover:bg-white hover:text-[#0D1D34]"
               >
-                Secure Your Seat — KES 4,500
+                Choose Your Day — KES 4,500
 
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>

@@ -19,13 +19,13 @@ export const EBBC2026 = {
   },
 
   ticket: {
-    name: "EBBC2026 Full Convention Pass",
+    name: "EBBC2026 Day Ticket",
     priceKes: 4500,
     currency: "KES",
     displayPrice: "KES 4,500",
 
     includes: [
-      "Access for both convention days",
+      "Access to one selected convention day",
       "Keynotes and panel discussions",
       "Exhibition and supplier access",
       "Networking sessions",
