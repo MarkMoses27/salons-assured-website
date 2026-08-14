@@ -196,8 +196,7 @@ function formatMoney(
   return new Intl.NumberFormat(
     "en-KE",
     {
-      maximumFractionDigits:
-        0,
+      maximumFractionDigits: 0,
     },
   ).format(
     Number(amount || 0),
@@ -293,6 +292,149 @@ function formatEventDate(
   }
 
   return "—";
+}
+
+function normaliseSearchText(
+  value: unknown,
+) {
+  return String(
+    value ?? "",
+  )
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      "",
+    )
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9]+/g,
+      " ",
+    )
+    .trim()
+    .replace(
+      /\s+/g,
+      " ",
+    );
+}
+
+function isWithinOneEdit(
+  first: string,
+  second: string,
+) {
+  if (
+    first === second
+  ) {
+    return true;
+  }
+
+  if (
+    Math.abs(
+      first.length -
+        second.length,
+    ) > 1
+  ) {
+    return false;
+  }
+
+  let firstIndex = 0;
+  let secondIndex = 0;
+  let edits = 0;
+
+  while (
+    firstIndex <
+      first.length &&
+    secondIndex <
+      second.length
+  ) {
+    if (
+      first[firstIndex] ===
+      second[secondIndex]
+    ) {
+      firstIndex += 1;
+      secondIndex += 1;
+      continue;
+    }
+
+    edits += 1;
+
+    if (edits > 1) {
+      return false;
+    }
+
+    if (
+      first.length ===
+      second.length
+    ) {
+      firstIndex += 1;
+      secondIndex += 1;
+      continue;
+    }
+
+    if (
+      first.length >
+      second.length
+    ) {
+      firstIndex += 1;
+      continue;
+    }
+
+    secondIndex += 1;
+  }
+
+  if (
+    firstIndex <
+      first.length ||
+    secondIndex <
+      second.length
+  ) {
+    edits += 1;
+  }
+
+  return edits <= 1;
+}
+
+function nameTermMatches(
+  term: string,
+  names: Array<
+    string | null | undefined
+  >,
+) {
+  if (!term) {
+    return true;
+  }
+
+  const nameTokens =
+    names
+      .flatMap(
+        (name) =>
+          normaliseSearchText(
+            name,
+          ).split(" "),
+      )
+      .filter(Boolean);
+
+  return nameTokens.some(
+    (token) => {
+      if (
+        token.includes(term) ||
+        term.includes(token)
+      ) {
+        return true;
+      }
+
+      if (
+        term.length >= 4 &&
+        token.length >= 4
+      ) {
+        return isWithinOneEdit(
+          term,
+          token,
+        );
+      }
+
+      return false;
+    },
+  );
 }
 
 function PaymentBadge({
@@ -910,13 +1052,12 @@ export default function EBBC2026PaymentAdminPage() {
       .signOut();
 
     setStaffName("");
+
     setAuthState(
       "signed_out",
     );
 
-    setRegistrations(
-      [],
-    );
+    setRegistrations([]);
 
     setSummary(
       emptySummary,
@@ -973,7 +1114,6 @@ export default function EBBC2026PaymentAdminPage() {
 
       setResult({
         ok: false,
-
         message:
           "Enter the EBBC2026 order number.",
       });
@@ -992,7 +1132,6 @@ export default function EBBC2026PaymentAdminPage() {
 
       setResult({
         ok: false,
-
         message:
           "Enter a valid M-Pesa transaction code.",
       });
@@ -1012,7 +1151,6 @@ export default function EBBC2026PaymentAdminPage() {
 
       setResult({
         ok: false,
-
         message:
           "Enter the amount received.",
       });
@@ -1061,7 +1199,6 @@ export default function EBBC2026PaymentAdminPage() {
 
         setResult({
           ok: false,
-
           message:
             "Your admin session has expired. Sign in again.",
         });
@@ -1141,7 +1278,6 @@ export default function EBBC2026PaymentAdminPage() {
 
       setResult({
         ok: false,
-
         message:
           "The payment could not be verified. Do not retry until the first result has been checked.",
       });
@@ -1151,10 +1287,31 @@ export default function EBBC2026PaymentAdminPage() {
   const filteredRows =
     useMemo(
       () => {
-        const cleanSearch =
+        const rawSearchTerms =
           search
             .trim()
-            .toLowerCase();
+            .split(/\s+/)
+            .filter(Boolean);
+
+        const searchTerms =
+          rawSearchTerms
+            .map(
+              (term) => ({
+                raw:
+                  term.toLowerCase(),
+
+                normalised:
+                  normaliseSearchText(
+                    term,
+                  ),
+              }),
+            )
+            .filter(
+              (term) =>
+                Boolean(
+                  term.normalised,
+                ),
+            );
 
         return registrations.filter(
           (row) => {
@@ -1167,36 +1324,87 @@ export default function EBBC2026PaymentAdminPage() {
               return false;
             }
 
-            if (!cleanSearch) {
+            if (
+              searchTerms.length ===
+              0
+            ) {
               return true;
             }
 
-            const haystack =
-              [
-                row.orderNumber,
-                row.buyerFullName,
-                row.buyerEmail,
-                row.buyerPhone,
-                row.buyerOrganisation,
-                row.ticketNumber,
-                row.attendeeFullName,
-                row.attendeeEmail,
-                row.attendeePhone,
-                row.participantCategory,
-                row.attendeeOrganisation,
-                row.attendeeCountry,
-                row.eventDate,
-                row.paymentMethod,
-                row.lastPaymentReference,
-                row.qrStatus,
-                row.checkInStatus,
-              ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
+            const names = [
+              row.buyerFullName,
+              row.attendeeFullName,
+            ];
 
-            return haystack.includes(
-              cleanSearch,
+            const nonEmailSearchText =
+              normaliseSearchText(
+                [
+                  row.orderNumber,
+                  row.buyerFullName,
+                  row.buyerPhone,
+                  row.buyerOrganisation,
+                  row.ticketNumber,
+                  row.attendeeFullName,
+                  row.attendeePhone,
+                  row.participantCategory,
+                  row.attendeeOrganisation,
+                  row.attendeeCountry,
+                  row.eventDate,
+                  row.paymentMethod,
+                  row.lastPaymentReference,
+                  row.qrStatus,
+                  row.checkInStatus,
+                ]
+                  .filter(Boolean)
+                  .join(" "),
+              );
+
+            const fullSearchText =
+              normaliseSearchText(
+                [
+                  nonEmailSearchText,
+                  row.buyerEmail,
+                  row.attendeeEmail,
+                ]
+                  .filter(Boolean)
+                  .join(" "),
+              );
+
+            return searchTerms.every(
+              ({
+                raw,
+                normalised,
+              }) => {
+                const isPlainNameWord =
+                  /^[a-z]+$/i.test(
+                    raw,
+                  );
+
+                if (
+                  isPlainNameWord
+                ) {
+                  if (
+                    nameTermMatches(
+                      normalised,
+                      names,
+                    )
+                  ) {
+                    return true;
+                  }
+
+                  return (
+                    nonEmailSearchText.includes(
+                      normalised,
+                    )
+                  );
+                }
+
+                return (
+                  fullSearchText.includes(
+                    normalised,
+                  )
+                );
+              },
             );
           },
         );
@@ -1688,12 +1896,15 @@ export default function EBBC2026PaymentAdminPage() {
                 <option value="all">
                   All Payments
                 </option>
+
                 <option value="paid">
                   Paid
                 </option>
+
                 <option value="partial">
                   Partial
                 </option>
+
                 <option value="unpaid">
                   Unpaid
                 </option>
@@ -1727,6 +1938,7 @@ export default function EBBC2026PaymentAdminPage() {
                   type="button"
                   onClick={() => {
                     setSearch("");
+
                     setPaymentFilter(
                       "all",
                     );
