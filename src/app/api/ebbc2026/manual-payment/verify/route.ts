@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { sendEbbc2026TicketEmailsForOrder } from "@/lib/ebbc2026/email";
+import { sendEbbc2026InstallmentPaymentNotification } from "@/lib/ebbc2026/installment-notification";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -134,7 +135,8 @@ async function sendTicketEmailsSafely(
         orderNumber,
         totalTickets:
           result.totalTickets,
-        sent: result.sent,
+        sent:
+          result.sent,
         skipped:
           result.skipped,
         failed:
@@ -149,6 +151,70 @@ async function sendTicketEmailsSafely(
       error,
     );
 
+    return null;
+  }
+}
+
+async function sendInstallmentNotificationSafely({
+  orderId,
+  orderNumber,
+  transactionReference,
+  installmentAmountKes,
+  totalPaidKes,
+  balanceKes,
+  totalAmountKes,
+  verifiedAt,
+  verifiedBy,
+}: {
+  orderId: string;
+  orderNumber: string;
+  transactionReference: string;
+  installmentAmountKes: number;
+  totalPaidKes: number;
+  balanceKes: number;
+  totalAmountKes: number;
+  verifiedAt: string;
+  verifiedBy?: string | null;
+}) {
+  try {
+    const result =
+      await sendEbbc2026InstallmentPaymentNotification(
+        {
+          orderId,
+          orderNumber,
+          transactionReference,
+          installmentAmountKes,
+          totalPaidKes,
+          balanceKes,
+          totalAmountKes,
+          verifiedAt,
+          verifiedBy,
+        },
+      );
+
+    console.log(
+      "EBBC2026 Equity installment notification result:",
+      {
+        orderNumber,
+        recipient:
+          result.recipient,
+        installmentAmountKes,
+        totalPaidKes,
+        balanceKes,
+      },
+    );
+
+    return result;
+  } catch (error) {
+    console.error(
+      `EBBC2026 Equity installment notification failed for ${orderNumber}:`,
+      error,
+    );
+
+    /*
+     * A staff notification failure must not
+     * invalidate a legitimate verified payment.
+     */
     return null;
   }
 }
@@ -169,7 +235,9 @@ async function activateOrderAndTickets({
       orderUpdateError,
   } =
     await supabaseAdmin
-      .from("ebbc_orders")
+      .from(
+        "ebbc_orders",
+      )
       .update({
         payment_status:
           "paid",
@@ -1020,12 +1088,43 @@ export async function POST(
      */
 
     if (!fullyPaid) {
+      const notificationResult =
+        await sendInstallmentNotificationSafely(
+          {
+            orderId:
+              order.id,
+
+            orderNumber:
+              order.order_number,
+
+            transactionReference:
+              mpesaCode,
+
+            installmentAmountKes:
+              submittedAmount,
+
+            totalPaidKes,
+
+            balanceKes,
+
+            totalAmountKes,
+
+            verifiedAt,
+
+            verifiedBy:
+              staff.display_name,
+          },
+        );
+
       return jsonResponse({
         ok: true,
+
         alreadyVerified:
           false,
+
         fullyPaid:
           false,
+
         ticketActivated:
           false,
 
@@ -1062,6 +1161,8 @@ export async function POST(
           staff.display_name,
 
         verifiedAt,
+
+        notificationResult,
       });
     }
 
@@ -1097,6 +1198,40 @@ export async function POST(
         500,
       );
     }
+
+    /*
+     * ------------------------------------------
+     * 13. Notify Elevate after activation
+     * ------------------------------------------
+     */
+
+    const notificationResult =
+      await sendInstallmentNotificationSafely(
+        {
+          orderId:
+            order.id,
+
+          orderNumber:
+            order.order_number,
+
+          transactionReference:
+            mpesaCode,
+
+          installmentAmountKes:
+            submittedAmount,
+
+          totalPaidKes,
+
+          balanceKes: 0,
+
+          totalAmountKes,
+
+          verifiedAt,
+
+          verifiedBy:
+            staff.display_name,
+        },
+      );
 
     return jsonResponse({
       ok: true,
@@ -1140,6 +1275,8 @@ export async function POST(
 
       emailResult:
         activation.emailResult,
+
+      notificationResult,
     });
   } catch (error) {
     console.error(
