@@ -64,6 +64,8 @@ export default function FastEBBCRegistrationPage() {
     eventDate: "",
     category: "",
   });
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
+  const [submittedAlreadyPaid, setSubmittedAlreadyPaid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isStartingPaystack, setIsStartingPaystack] = useState(false);
   const [error, setError] = useState("");
@@ -142,6 +144,7 @@ export default function FastEBBCRegistrationPage() {
         throw new Error("Registration was saved, but the order number was not returned.");
       }
 
+      setSubmittedAlreadyPaid(alreadyPaid);
       setOrder({ orderNumber, totalAmountKes, currency });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caughtError) {
@@ -201,6 +204,55 @@ export default function FastEBBCRegistrationPage() {
       );
       setIsStartingPaystack(false);
     }
+  }
+
+  if (order && submittedAlreadyPaid) {
+    return (
+      <main className="min-h-screen bg-[#F7F5F5] px-5 pb-20 pt-28 text-[#0D1D34] sm:px-8">
+        <section className="mx-auto max-w-[680px]">
+          <div className="overflow-hidden rounded-[32px] border border-[#0D1D34]/8 bg-white shadow-[0_28px_80px_rgba(13,29,52,0.10)]">
+            <div className="bg-[#0D1D34] px-6 py-12 text-center text-white sm:px-10">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#CC8591]">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#CC8591]">
+                Registration complete
+              </p>
+              <h1 className="mt-3 text-3xl font-black tracking-[-0.03em] sm:text-4xl">
+                You do not need to pay again
+              </h1>
+              <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-white/65">
+                Your EBBC 2026 registration has been saved. Salons Assured Kenya will match and verify the Paybill payment you already made.
+              </p>
+            </div>
+
+            <div className="p-6 sm:p-9">
+              <div className="rounded-[22px] bg-[#F7F5F5] p-5 text-center">
+                <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#0D1D34]/40">
+                  Registration reference
+                </p>
+                <p className="mt-2 text-base font-black">{order.orderNumber}</p>
+              </div>
+
+              <div className="mt-5 flex items-start gap-3 rounded-[22px] border border-[#CC8591]/25 bg-[#CC8591]/8 p-5 text-sm leading-6 text-[#0D1D34]/70">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
+                <p>
+                  Keep your M-PESA confirmation message. Once your existing payment is verified, your EBBC ticket will be activated and sent to the email used during registration.
+                </p>
+              </div>
+
+              <Link
+                href="/ebbc2026"
+                className="mt-6 inline-flex h-[56px] w-full items-center justify-center gap-3 rounded-full bg-[#0D1D34] px-7 text-sm font-extrabold text-white transition hover:bg-[#CC8591]"
+              >
+                Done
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   if (order) {
@@ -302,7 +354,7 @@ export default function FastEBBCRegistrationPage() {
             Register in under a minute
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#0D1D34]/60">
-            One short form. Choose your payment method immediately after registration.
+            One short form. If you already paid by Paybill, simply tick the option below.
           </p>
         </div>
 
@@ -392,6 +444,29 @@ export default function FastEBBCRegistrationPage() {
                   </select>
                 </label>
               </div>
+
+              <label
+                className={`flex cursor-pointer items-start gap-4 rounded-[22px] border p-5 transition ${
+                  alreadyPaid
+                    ? "border-[#CC8591]/55 bg-[#CC8591]/10"
+                    : "border-[#0D1D34]/10 bg-[#F7F5F5] hover:border-[#CC8591]/35"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={alreadyPaid}
+                  onChange={(event) => setAlreadyPaid(event.target.checked)}
+                  className="mt-1 h-5 w-5 accent-[#CC8591]"
+                />
+                <span>
+                  <span className="block text-sm font-black text-[#0D1D34]">
+                    I already paid via M-PESA Paybill
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-[#0D1D34]/55">
+                    Tick this if your EBBC 2026 payment was already sent. You will not be asked to pay again.
+                  </span>
+                </span>
+              </label>
             </div>
 
             <button
@@ -406,7 +481,7 @@ export default function FastEBBCRegistrationPage() {
                 </>
               ) : (
                 <>
-                  Continue to Payment
+                  {alreadyPaid ? "Complete Registration" : "Continue to Payment"}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -414,7 +489,9 @@ export default function FastEBBCRegistrationPage() {
 
             <div className="mt-5 flex items-center justify-center gap-2 text-center text-[10px] font-bold text-[#0D1D34]/45">
               <ShieldCheck className="h-4 w-4 text-[#CC8591]" />
-              Secure registration · ticket issued after payment verification
+              {alreadyPaid
+                ? "Existing Paybill payment will be verified against your registration"
+                : "Secure registration · ticket issued after payment verification"}
             </div>
 
             <p className="mt-6 text-center text-xs text-[#0D1D34]/50">
