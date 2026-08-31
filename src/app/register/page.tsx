@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import {
   ArrowRight,
   CalendarDays,
+  Check,
   CheckCircle2,
   CreditCard,
   Loader2,
@@ -19,11 +20,13 @@ import {
   isEBBCEarlyBirdActive,
 } from "@/lib/ebbc2026/config";
 
+type EventDate = "2026-11-17" | "2026-11-18";
+
 type FormState = {
   fullName: string;
   phone: string;
   email: string;
-  eventDate: "2026-11-17" | "2026-11-18" | "";
+  eventDates: EventDate[];
   category: string;
 };
 
@@ -52,6 +55,23 @@ type PaymentResponse = {
 const FIELD_CLASS =
   "mt-2 h-[54px] w-full rounded-2xl border border-[#0D1D34]/12 bg-white px-4 text-[15px] font-medium text-[#0D1D34] outline-none transition placeholder:text-[#0D1D34]/30 focus:border-[#CC8591] focus:ring-4 focus:ring-[#CC8591]/15";
 
+const EVENT_DAY_OPTIONS: Array<{
+  value: EventDate;
+  day: string;
+  date: string;
+}> = [
+  {
+    value: "2026-11-17",
+    day: "Day 1",
+    date: "17 November 2026",
+  },
+  {
+    value: "2026-11-18",
+    day: "Day 2",
+    date: "18 November 2026",
+  },
+];
+
 function formatMoney(amount: number) {
   return new Intl.NumberFormat("en-KE").format(amount);
 }
@@ -61,7 +81,7 @@ export default function FastEBBCRegistrationPage() {
     fullName: "",
     phone: "",
     email: "",
-    eventDate: "",
+    eventDates: [],
     category: "",
   });
   const [alreadyPaid, setAlreadyPaid] = useState(false);
@@ -77,9 +97,24 @@ export default function FastEBBCRegistrationPage() {
 
   const ticketPrice = getEBBCTicketPriceKes();
   const earlyBird = isEBBCEarlyBirdActive();
+  const selectedDayCount = form.eventDates.length;
+  const estimatedTotal = ticketPrice * Math.max(selectedDayCount, 1);
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function toggleEventDate(eventDate: EventDate) {
+    setForm((current) => {
+      const selected = current.eventDates.includes(eventDate);
+
+      return {
+        ...current,
+        eventDates: selected
+          ? current.eventDates.filter((date) => date !== eventDate)
+          : [...current.eventDates, eventDate],
+      };
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -90,16 +125,25 @@ export default function FastEBBCRegistrationPage() {
       !form.fullName.trim() ||
       !form.phone.trim() ||
       !form.email.trim() ||
-      !form.eventDate ||
+      form.eventDates.length < 1 ||
       !form.category
     ) {
-      setError("Please complete all five fields.");
+      setError("Please complete your details and select at least one event day.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      const attendeeBase = {
+        fullName: form.fullName.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
+        category: form.category,
+        organisation: "",
+        country: "Kenya",
+      };
+
       const response = await fetch("/api/ebbc2026/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -110,17 +154,10 @@ export default function FastEBBCRegistrationPage() {
           country: "Kenya",
           organisation: "",
           referralCode: "",
-          attendees: [
-            {
-              fullName: form.fullName.trim(),
-              email: form.email.trim().toLowerCase(),
-              phone: form.phone.trim(),
-              category: form.category,
-              organisation: "",
-              country: "Kenya",
-              eventDate: form.eventDate,
-            },
-          ],
+          attendees: form.eventDates.map((eventDate) => ({
+            ...attendeeBase,
+            eventDate,
+          })),
         }),
       });
 
@@ -136,7 +173,7 @@ export default function FastEBBCRegistrationPage() {
         data.order?.totalAmountKes ??
           data.order?.total_amount_kes ??
           data.totalAmountKes ??
-          ticketPrice,
+          ticketPrice * form.eventDates.length,
       );
       const currency = (data.order?.currency || data.currency || "KES").toUpperCase();
 
@@ -237,7 +274,7 @@ export default function FastEBBCRegistrationPage() {
               <div className="mt-5 flex items-start gap-3 rounded-[22px] border border-[#CC8591]/25 bg-[#CC8591]/8 p-5 text-sm leading-6 text-[#0D1D34]/70">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
                 <p>
-                  Keep your M-PESA confirmation message. Once your existing payment is verified, your EBBC ticket will be activated and sent to the email used during registration.
+                  Keep your M-PESA confirmation message. Once your existing payment is verified against the selected day ticket(s), your EBBC ticket(s) will be activated and sent to the email used during registration.
                 </p>
               </div>
 
@@ -354,7 +391,7 @@ export default function FastEBBCRegistrationPage() {
             Register in under a minute
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#0D1D34]/60">
-            One short form. If you already paid by Paybill, simply tick the option below.
+            Attend one day or both. If you already paid by Paybill, simply tick the option below.
           </p>
         </div>
 
@@ -366,8 +403,8 @@ export default function FastEBBCRegistrationPage() {
             </div>
             <div className="text-xs font-bold sm:text-center">CITAM Valley Road</div>
             <div className="text-xs font-black text-[#CC8591] sm:text-right">
-              KES {formatMoney(ticketPrice)}
-              {earlyBird ? " Early Bird" : ""}
+              KES {formatMoney(ticketPrice)} / day
+              {earlyBird ? " · Early Bird" : ""}
             </div>
           </div>
 
@@ -416,34 +453,86 @@ export default function FastEBBCRegistrationPage() {
                 </label>
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0D1D34]/50">Choose event day</span>
-                  <select
-                    value={form.eventDate}
-                    onChange={(event) => updateField("eventDate", event.target.value as FormState["eventDate"])}
-                    className={FIELD_CLASS}
-                  >
-                    <option value="">Select day</option>
-                    <option value="2026-11-17">17 November 2026</option>
-                    <option value="2026-11-18">18 November 2026</option>
-                  </select>
-                </label>
+              <div>
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0D1D34]/50">
+                      Which day(s) will you attend?
+                    </p>
+                    <p className="mt-1 text-xs text-[#0D1D34]/45">Select one or both days.</p>
+                  </div>
+                  {selectedDayCount > 0 ? (
+                    <p className="text-right text-xs font-black text-[#CC8591]">
+                      {selectedDayCount} {selectedDayCount === 1 ? "day" : "days"}
+                    </p>
+                  ) : null}
+                </div>
 
-                <label className="block">
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0D1D34]/50">Your category</span>
-                  <select
-                    value={form.category}
-                    onChange={(event) => updateField("category", event.target.value)}
-                    className={FIELD_CLASS}
-                  >
-                    <option value="">Select category</option>
-                    {EBBC2026.participantCategories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                </label>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {EVENT_DAY_OPTIONS.map((option) => {
+                    const selected = form.eventDates.includes(option.value);
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => toggleEventDate(option.value)}
+                        aria-pressed={selected}
+                        className={`flex min-h-[84px] items-center justify-between rounded-[22px] border p-4 text-left transition ${
+                          selected
+                            ? "border-[#CC8591] bg-[#CC8591]/10 shadow-[0_10px_28px_rgba(204,133,145,0.12)]"
+                            : "border-[#0D1D34]/10 bg-[#F7F5F5] hover:border-[#CC8591]/40"
+                        }`}
+                      >
+                        <span>
+                          <span className="block text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#CC8591]">
+                            {option.day}
+                          </span>
+                          <span className="mt-1 block text-sm font-black text-[#0D1D34]">
+                            {option.date}
+                          </span>
+                        </span>
+                        <span
+                          className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${
+                            selected
+                              ? "border-[#CC8591] bg-[#CC8591] text-white"
+                              : "border-[#0D1D34]/15 bg-white text-transparent"
+                          }`}
+                        >
+                          <Check className="h-4 w-4" />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-4 rounded-2xl bg-[#0D1D34] px-4 py-3 text-white">
+                  <span className="text-xs font-semibold text-white/65">
+                    {selectedDayCount === 2
+                      ? "Both days · 2 day tickets"
+                      : selectedDayCount === 1
+                        ? "1 day ticket"
+                        : "Select your day(s)"}
+                  </span>
+                  <span className="text-sm font-black text-[#CC8591]">
+                    {selectedDayCount > 0 ? `KES ${formatMoney(estimatedTotal)}` : "—"}
+                  </span>
+                </div>
               </div>
+
+              <label className="block">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0D1D34]/50">Your category</span>
+                <select
+                  value={form.category}
+                  onChange={(event) => updateField("category", event.target.value)}
+                  className={FIELD_CLASS}
+                >
+                  <option value="">Select category</option>
+                  {EBBC2026.participantCategories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
 
               <label
                 className={`flex cursor-pointer items-start gap-4 rounded-[22px] border p-5 transition ${
@@ -490,7 +579,7 @@ export default function FastEBBCRegistrationPage() {
             <div className="mt-5 flex items-center justify-center gap-2 text-center text-[10px] font-bold text-[#0D1D34]/45">
               <ShieldCheck className="h-4 w-4 text-[#CC8591]" />
               {alreadyPaid
-                ? "Existing Paybill payment will be verified against your registration"
+                ? "Existing Paybill payment will be verified against your selected day ticket(s)"
                 : "Secure registration · ticket issued after payment verification"}
             </div>
 
