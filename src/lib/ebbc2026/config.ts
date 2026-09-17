@@ -92,18 +92,18 @@ export const EBBC2026 = {
   },
 } as const;
 
-export function isEBBCEarlyBirdActive() {
+export function isEBBCEarlyBirdActive(_now: Date = new Date()) {
   // The EBBC2026 Early Bird offer ended on 31 August 2026.
   // Keep this explicit so static/prerendered ticket pages can never
   // be rebuilt with the expired KES 4,000 price.
   return false;
 }
 
-export function getEBBCTicketPriceKes() {
+export function getEBBCTicketPriceKes(_now: Date = new Date()) {
   return EBBC2026.ticket.standardPriceKes;
 }
 
-export function getEBBCTicketDisplayPrice() {
+export function getEBBCTicketDisplayPrice(_now: Date = new Date()) {
   return EBBC2026.ticket.displayPrice;
 }
 
