@@ -36,8 +36,8 @@ export const EBBC2026 = {
       displayPrice: "KES 4,000",
 
       /*
-       * 31 August 2026 at 11:59:59 PM
-       * East Africa Time (UTC+3).
+       * Historical Early Bird offer. The offer ended on
+       * 31 August 2026 at 11:59:59 PM East Africa Time (UTC+3).
        */
       endsAt: "2026-08-31T20:59:59.999Z",
 
@@ -92,33 +92,18 @@ export const EBBC2026 = {
   },
 } as const;
 
-export function isEBBCEarlyBirdActive(
-  now: Date = new Date(),
-) {
-  const deadline = Date.parse(
-    EBBC2026.ticket.earlyBird.endsAt,
-  );
-
-  return now.getTime() <= deadline;
+export function isEBBCEarlyBirdActive() {
+  // The EBBC2026 Early Bird offer ended on 31 August 2026.
+  // Keep this explicit so static/prerendered ticket pages can never
+  // be rebuilt with the expired KES 4,000 price.
+  return false;
 }
 
-export function getEBBCTicketPriceKes(
-  now: Date = new Date(),
-) {
-  if (isEBBCEarlyBirdActive(now)) {
-    return EBBC2026.ticket.earlyBird.priceKes;
-  }
-
+export function getEBBCTicketPriceKes() {
   return EBBC2026.ticket.standardPriceKes;
 }
 
-export function getEBBCTicketDisplayPrice(
-  now: Date = new Date(),
-) {
-  if (isEBBCEarlyBirdActive(now)) {
-    return EBBC2026.ticket.earlyBird.displayPrice;
-  }
-
+export function getEBBCTicketDisplayPrice() {
   return EBBC2026.ticket.displayPrice;
 }
 
