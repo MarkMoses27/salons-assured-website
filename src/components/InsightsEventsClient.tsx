@@ -40,10 +40,10 @@ type InsightsEventsClientProps = {
   insights: HomeInsight[];
 };
 
-const eventFormats = [
-  "Masterclasses",
-  "Owner Roundtables",
-  "Live Business Audits",
+const eventDetails = [
+  "17–18 November 2026",
+  "CITAM Valley Road · Nairobi",
+  "Elevate. Grow. Lead.",
 ];
 
 const insightTopics = [
@@ -510,7 +510,7 @@ export default function InsightsEventsClient({
                 </p>
 
                 <div className="mt-8 border-y border-white/[0.13]">
-                  {eventFormats.map(
+                  {eventDetails.map(
                     (format, index) => (
                       <div
                         key={format}

@@ -972,10 +972,9 @@ export default function RecruitmentClient() {
             </h2>
 
             <p className="mt-7 max-w-[500px] text-[15px] leading-8 text-white/65">
-              Choose whether you are requesting staff or submitting
-              a professional profile. Your completed details will
-              open in WhatsApp for submission to the Salons Assured
-              recruitment team.
+              Tell us the role and location for your business. Your
+              completed details will open in WhatsApp for you to
+              review and send to the Salons Assured recruitment team.
             </p>
 
             <div className="mt-9 border-t border-white/15 pt-7">
