@@ -4,6 +4,7 @@ import Image from "next/image";
 
 import {
   useState,
+  useEffect,
   type ChangeEvent,
   type FormEvent,
   type ReactNode,
@@ -51,7 +52,7 @@ const initialFormData: ContactFormData = {
   businessName: "",
   email: "",
   phone: "",
-  clientType: "",
+  clientType: "Beauty business owner",
   service: "",
   location: "",
   preferredContact:
@@ -292,6 +293,14 @@ export default function ContactClient() {
     }
   };
 
+  useEffect(() => {
+    const requestedService = new URLSearchParams(window.location.search).get("service");
+    const allowedServices = ["Business assessment or audit", "Beauty business setup and launch", "Recruitment and staffing"];
+    if (requestedService && allowedServices.includes(requestedService)) {
+      setFormData((current) => ({ ...current, service: requestedService }));
+    }
+  }, []);
+
   const handleSubmit = (
     event:
       FormEvent<HTMLFormElement>,
@@ -444,7 +453,7 @@ export default function ContactClient() {
       {/* ENQUIRY */}
       <section
         id="enquiry"
-        className="relative overflow-hidden bg-[#f8f5f3] py-20 sm:py-24 lg:py-28"
+        className="relative scroll-mt-24 overflow-hidden bg-[#f8f5f3] py-20 sm:py-24 lg:py-28"
       >
         <div className="pointer-events-none absolute -left-72 -top-72 h-[650px] w-[650px] rounded-full border border-[#b87586]/10" />
 
@@ -579,309 +588,26 @@ export default function ContactClient() {
               }
               className="mt-8"
             >
+              <p className="mb-6 text-[12px] leading-6 text-[#071b33]/60">Start with a few details. This prepares a WhatsApp message for you to review and send. Looking for a job? <a href="/job-seekers" className="font-bold underline underline-offset-4">Use our career opportunities page</a>.</p>
               <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <FieldLabel
-                    htmlFor="name"
-                    required
-                  >
-                    Your name
-                  </FieldLabel>
-
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    required
-                    value={
-                      formData.name
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Full name"
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div>
-                  <FieldLabel
-                    htmlFor="businessName"
-                  >
-                    Business or brand
-                  </FieldLabel>
-
-                  <input
-                    id="businessName"
-                    name="businessName"
-                    type="text"
-                    autoComplete="organization"
-                    value={
-                      formData.businessName
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Business name"
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div>
-                  <FieldLabel
-                    htmlFor="phone"
-                    required
-                  >
-                    Phone number
-                  </FieldLabel>
-
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    required
-                    value={
-                      formData.phone
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="e.g. 0712 345 678"
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div>
-                  <FieldLabel
-                    htmlFor="email"
-                  >
-                    Email address
-                  </FieldLabel>
-
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={
-                      formData.email
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="name@example.com"
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div>
-                  <FieldLabel
-                    htmlFor="clientType"
-                    required
-                  >
-                    You are contacting us as
-                  </FieldLabel>
-
-                  <select
-                    id="clientType"
-                    name="clientType"
-                    required
-                    value={
-                      formData.clientType
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={[
-                      fieldClass,
-                      "appearance-none",
-                    ].join(" ")}
-                  >
-                    <option value="">
-                      Select your category
-                    </option>
-
-                    <option value="Beauty business owner">
-                      Beauty business owner
-                    </option>
-
-                    <option value="Beauty industry investor">
-                      Beauty industry investor
-                    </option>
-
-                    <option value="Salon or spa manager">
-                      Salon or spa manager
-                    </option>
-
-                    <option value="Beauty professional">
-                      Beauty professional
-                    </option>
-
-                    <option value="Corporate or training partner">
-                      Corporate or training partner
-                    </option>
-
-                    <option value="Other">
-                      Other
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <FieldLabel
-                    htmlFor="service"
-                    required
-                  >
-                    Support required
-                  </FieldLabel>
-
-                  <select
-                    id="service"
-                    name="service"
-                    required
-                    value={
-                      formData.service
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={[
-                      fieldClass,
-                      "appearance-none",
-                    ].join(" ")}
-                  >
-                    <option value="">
-                      Select a service
-                    </option>
-
-                    <option value="Recruitment and staffing">
-                      Recruitment and staffing
-                    </option>
-
-                    <option value="Training and staff development">
-                      Training and staff development
-                    </option>
-
-                    <option value="Business systems and documentation">
-                      Business systems and documentation
-                    </option>
-
-                    <option value="Beauty business setup and launch">
-                      Beauty business setup and launch
-                    </option>
-
-                    <option value="Digital growth and visibility">
-                      Digital growth and visibility
-                    </option>
-
-                    <option value="Management consulting">
-                      Management consulting
-                    </option>
-
-                    <option value="Business assessment or audit">
-                      Business assessment or audit
-                    </option>
-
-                    <option value="Career or job enquiry">
-                      Career or job enquiry
-                    </option>
-
-                    <option value="Partnership or event">
-                      Partnership or event
-                    </option>
-
-                    <option value="Other">
-                      Other
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <FieldLabel
-                    htmlFor="location"
-                  >
-                    Business location
-                  </FieldLabel>
-
-                  <input
-                    id="location"
-                    name="location"
-                    type="text"
-                    autoComplete="address-level2"
-                    value={
-                      formData.location
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Town, county or country"
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div>
-                  <FieldLabel
-                    htmlFor="preferredContact"
-                    required
-                  >
-                    Preferred response
-                  </FieldLabel>
-
-                  <select
-                    id="preferredContact"
-                    name="preferredContact"
-                    required
-                    value={
-                      formData.preferredContact
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className={[
-                      fieldClass,
-                      "appearance-none",
-                    ].join(" ")}
-                  >
-                    <option value="WhatsApp">
-                      WhatsApp
-                    </option>
-
-                    <option value="Phone call">
-                      Phone call
-                    </option>
-
-                    <option value="Email">
-                      Email
-                    </option>
-                  </select>
-                </div>
+                <div><FieldLabel htmlFor="name" required>Your name</FieldLabel><input id="name" name="name" type="text" autoComplete="name" required value={formData.name} onChange={handleChange} placeholder="Full name" className={fieldClass} /></div>
+                <div><FieldLabel htmlFor="phone" required>Phone / WhatsApp number</FieldLabel><input id="phone" name="phone" type="tel" autoComplete="tel" required value={formData.phone} onChange={handleChange} placeholder="e.g. 0712 345 678" className={fieldClass} /></div>
+                <div><FieldLabel htmlFor="businessName">Business or project name</FieldLabel><input id="businessName" name="businessName" autoComplete="organization" value={formData.businessName} onChange={handleChange} placeholder="Business name or planned project" className={fieldClass} /></div>
+                <div><FieldLabel htmlFor="service" required>Support required</FieldLabel><select id="service" name="service" required value={formData.service} onChange={handleChange} className={fieldClass}>
+                  <option value="">Select a service</option>
+                  <option>Recruitment and staffing</option><option>Training and staff development</option><option>Business systems and documentation</option><option>Beauty business setup and launch</option><option>Digital growth and visibility</option><option>Management consulting</option><option>Business assessment or audit</option><option>Career or job enquiry</option><option>Partnership or event</option><option>Other</option>
+                </select></div>
               </div>
-
-              <div className="mt-5">
-                <FieldLabel
-                  htmlFor="message"
-                  required
-                >
-                  Tell us about the challenge
-                </FieldLabel>
-
-                <textarea
-                  id="message"
-                  name="message"
-                  required
-                  rows={7}
-                  value={
-                    formData.message
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  placeholder="Describe the business, what is happening and the support you need."
-                  className="w-full resize-none border border-[#071b33]/15 bg-[#fbf9f8] px-4 py-4 text-[13px] leading-7 text-[#071b33] outline-none transition-all placeholder:text-[#071b33]/35 focus:border-[#b87586] focus:bg-white focus:ring-4 focus:ring-[#d9a3af]/20"
-                />
-              </div>
+              <div className="mt-5"><FieldLabel htmlFor="message" required>What do you need help with?</FieldLabel><textarea id="message" name="message" required rows={4} value={formData.message} onChange={handleChange} placeholder="Briefly describe your challenge or planned business." className="w-full resize-y border border-[#071b33]/15 bg-[#fbf9f8] px-4 py-4 text-[13px] leading-7 outline-none focus:border-[#b87586] focus:ring-4 focus:ring-[#d9a3af]/20" /></div>
+              <details className="mt-6 border-t border-[#071b33]/10 pt-5">
+                <summary className="cursor-pointer py-2 text-[12px] font-bold text-[#071b33]">Add more details (optional)</summary>
+                <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                  <div><FieldLabel htmlFor="clientType">You are contacting us as</FieldLabel><select id="clientType" name="clientType" value={formData.clientType} onChange={handleChange} className={fieldClass}><option>Beauty business owner</option><option>Beauty industry investor</option><option>Salon or spa manager</option><option>Beauty professional</option><option>Corporate or training partner</option><option>Other</option></select></div>
+                  <div><FieldLabel htmlFor="location">Business location</FieldLabel><input id="location" name="location" autoComplete="address-level2" value={formData.location} onChange={handleChange} placeholder="Town or area" className={fieldClass} /></div>
+                  <div><FieldLabel htmlFor="email">Email address</FieldLabel><input id="email" name="email" type="email" autoComplete="email" value={formData.email} onChange={handleChange} placeholder="name@example.com" className={fieldClass} /></div>
+                  <div><FieldLabel htmlFor="preferredContact">Preferred response</FieldLabel><select id="preferredContact" name="preferredContact" value={formData.preferredContact} onChange={handleChange} className={fieldClass}><option>WhatsApp</option><option>Phone call</option><option>Email</option></select></div>
+                </div>
+              </details>
 
               <div className="mt-7 flex flex-col gap-5 border-t border-[#071b33]/10 pt-7 sm:flex-row sm:items-center sm:justify-between">
                 <p className="flex max-w-[420px] items-start gap-3 text-[10px] leading-5 text-[#071b33]/50">
@@ -900,7 +626,7 @@ export default function ContactClient() {
                     strokeWidth={1.8}
                   />
 
-                  Send enquiry
+                  Prepare WhatsApp enquiry
 
                   <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:rotate-45" />
                 </button>

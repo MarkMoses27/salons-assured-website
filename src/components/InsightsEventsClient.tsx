@@ -454,7 +454,7 @@ export default function InsightsEventsClient({
 
           {/* EVENTS SIDE */}
           <Link
-            href="/events"
+            href="/ebbc2026"
             className="group relative flex min-h-[720px] flex-col overflow-hidden bg-[#071b33] text-white lg:min-h-full"
           >
             <div className="absolute inset-x-0 top-0 h-[46%] overflow-hidden">
@@ -493,22 +493,20 @@ export default function InsightsEventsClient({
 
               <div className="mt-[330px] sm:mt-[390px] lg:mt-[360px]">
                 <p className="text-[8px] font-extrabold uppercase tracking-[0.3em] text-[#d9a3af]">
-                  Next Salons Assured Experience
+                  17–18 November 2026 · CITAM Valley Road
                 </p>
 
                 <h3 className="mt-6 [font-family:var(--font-display)] text-[45px] font-semibold leading-[0.9] tracking-[-0.052em] sm:text-[57px]">
-                  The Beauty Business
+                  Elevate Beauty Business
                   <span className="block font-medium italic text-[#d9a3af]">
-                    Growth Room.
+                    Convention 2026.
                   </span>
                 </h3>
 
                 <p className="mt-6 max-w-[500px] text-[13px] leading-7 text-white/48">
-                  Practical conversations,
-                  masterclasses and industry
-                  experiences built around the
-                  real challenges facing beauty
-                  businesses.
+                  Elevate. Grow. Lead. Join beauty business owners and
+                  industry professionals for two days of learning,
+                  connections and practical business conversations.
                 </p>
 
                 <div className="mt-8 border-y border-white/[0.13]">
@@ -538,13 +536,12 @@ export default function InsightsEventsClient({
                     />
 
                     <span className="text-[8px] font-extrabold uppercase tracking-[0.2em] text-white/40">
-                      Programme published on
-                      the Events page
+                      Registration is open
                     </span>
                   </div>
 
                   <span className="inline-flex items-center gap-3 text-[9px] font-extrabold uppercase tracking-[0.18em]">
-                    Explore events
+                    Explore the convention
 
                     <ArrowRight className="h-4 w-4 text-[#d9a3af] transition-transform duration-300 group-hover:translate-x-1.5" />
                   </span>

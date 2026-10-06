@@ -295,11 +295,10 @@ export default function Hero() {
             }}
             className="mt-8 max-w-[575px] text-[15px] leading-8 text-white/68 sm:text-[17px] sm:leading-9"
           >
-            We strengthen the people,
-            systems and strategy behind
-            salons, spas and barbershops
-            so they can grow with structure,
-            consistency and confidence.
+            Hire reliable staff, strengthen your business systems,
+            or plan your next salon, spa or barbershop.
+            Tell us what you need and we will help you
+            choose the right support.
           </motion.p>
 
           {/* SINGLE HERO CTA */}
@@ -317,13 +316,13 @@ export default function Hero() {
               delay: 0.8,
               ease: premiumEase,
             }}
-            className="mt-9"
+            className="mt-9 flex flex-wrap items-center gap-5"
           >
             <Link
-              href="/services"
+              href="/contact#enquiry"
               className="group inline-flex h-[54px] items-center gap-5 rounded-full border border-white/20 bg-white/[0.07] pl-7 pr-2 text-[12px] font-bold text-white backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:border-[#d9a3af] hover:bg-[#d9a3af] hover:text-[#071b33]"
             >
-              Explore How We Help
+              Discuss Your Business
 
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#d9a3af] text-[#071b33] transition-all duration-500 group-hover:translate-x-0.5 group-hover:bg-[#071b33] group-hover:text-white">
                 <ArrowRight
@@ -332,6 +331,9 @@ export default function Hero() {
                 />
               </span>
             </Link>
+            <a href="#owner-support" className="inline-flex min-h-12 items-center border-b border-white/30 text-[12px] font-bold text-white/80 transition hover:border-[#d9a3af] hover:text-white">
+              Choose the support you need
+            </a>
           </motion.div>
         </motion.div>
       </div>

@@ -1,3 +1,4 @@
+import OwnerSupport from "@/components/OwnerSupport";
 import Hero from "@/components/Hero";
 import WhoWeHelp from "@/components/WhoWeHelp";
 import ServicesPreview from "@/components/ServicesPreview";
@@ -10,6 +11,7 @@ export default function HomePage() {
   return (
     <main>
       <Hero />
+      <OwnerSupport />
       <WhoWeHelp />
       <ServicesPreview />
       <CaseStudies />

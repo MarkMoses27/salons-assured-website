@@ -245,7 +245,7 @@ const faqs = [
       "Can beauty professionals apply through this page?",
 
     answer:
-      "Yes. Select Apply for Jobs and submit your professional details, preferred position, experience, availability and a link to your CV or portfolio where available.",
+      "Beauty professionals can use the separate Career Opportunities page to submit their professional details. This recruitment enquiry form is for employers requesting staff.",
   },
   {
     question:
@@ -907,19 +907,12 @@ export default function RecruitmentClient() {
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  openRecruitmentDesk(
-                    "Apply for Jobs",
-                  )
-                }
-                className="group mt-8 inline-flex h-14 items-center justify-center gap-4 rounded-full bg-[#b87586] px-8 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white transition duration-300 hover:-translate-y-1 hover:bg-[#071b33]"
+              <a href="/job-seekers" className="group mt-8 inline-flex h-14 items-center justify-center gap-4 rounded-full bg-[#b87586] px-8 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white transition duration-300 hover:-translate-y-1 hover:bg-[#071b33]"
               >
                 Apply for Opportunities
 
                 <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:rotate-45" />
-              </button>
+              </a>
             </Reveal>
 
             <Reveal
@@ -1044,201 +1037,30 @@ export default function RecruitmentClient() {
               </div>
 
               <div className="mt-7 grid gap-5">
-                <label className="grid gap-2">
-                  <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                    Request Type *
-                  </span>
-
-                  <select
-                    name="requestType"
-                    required
-                    value={
-                      requestType
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      setRequestType(
-                        event
-                          .target
-                          .value as RecruitmentRequest,
-                      )
-                    }
-                    className={
-                      fieldClass
-                    }
-                  >
-                    <option value="Request Staff">
-                      Request Staff
-                    </option>
-
-                    <option value="Apply for Jobs">
-                      Apply for Jobs
-                    </option>
-                  </select>
-                </label>
-
+                <input type="hidden" name="requestType" value="Request Staff" />
+                <p className="text-[12px] leading-6 text-[#071b33]/60">Request staff for your business. Job applicants can <a href="/job-seekers" className="font-bold underline underline-offset-4">explore career opportunities</a> separately.</p>
                 <div className="grid gap-5 md:grid-cols-2">
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Full Name / Contact Person *
-                    </span>
-
-                    <input
-                      name="name"
-                      required
-                      autoComplete="name"
-                      placeholder="Enter full name"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Business / Salon Name
-                    </span>
-
-                    <input
-                      name="businessName"
-                      autoComplete="organization"
-                      placeholder="Enter business name"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Phone Number *
-                    </span>
-
-                    <input
-                      name="phone"
-                      required
-                      type="tel"
-                      autoComplete="tel"
-                      placeholder="e.g. 0712 345 678"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Email Address *
-                    </span>
-
-                    <input
-                      name="email"
-                      required
-                      type="email"
-                      autoComplete="email"
-                      placeholder="name@example.com"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Location *
-                    </span>
-
-                    <input
-                      name="location"
-                      required
-                      autoComplete="address-level2"
-                      placeholder="Town or area"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Role / Position *
-                    </span>
-
-                    <input
-                      name="role"
-                      required
-                      placeholder="e.g. Nail Technician"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Experience
-                    </span>
-
-                    <input
-                      name="experience"
-                      placeholder="e.g. 3 years"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                      Availability / Date Needed
-                    </span>
-
-                    <input
-                      name="availability"
-                      placeholder="Enter availability"
-                      className={
-                        fieldClass
-                      }
-                    />
-                  </label>
+                  <label className="grid gap-2"><span className="text-[10px] font-bold">Contact person *</span><input name="name" required autoComplete="name" placeholder="Full name" className={fieldClass} /></label>
+                  <label className="grid gap-2"><span className="text-[10px] font-bold">Phone / WhatsApp number *</span><input name="phone" required type="tel" autoComplete="tel" placeholder="e.g. 0712 345 678" className={fieldClass} /></label>
+                  <label className="grid gap-2"><span className="text-[10px] font-bold">Business name</span><input name="businessName" autoComplete="organization" placeholder="Salon, spa or barbershop name" className={fieldClass} /></label>
+                  <label className="grid gap-2"><span className="text-[10px] font-bold">Business location *</span><input name="location" required autoComplete="address-level2" placeholder="Town or area" className={fieldClass} /></label>
+                  <label className="grid gap-2 md:col-span-2"><span className="text-[10px] font-bold">Role / position needed *</span><input name="role" required placeholder="e.g. Barber, Nail Technician or Salon Manager" className={fieldClass} /></label>
                 </div>
-
-                <label className="grid gap-2">
-                  <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                    CV, Portfolio or Professional Profile Link
-                  </span>
-
-                  <input
-                    name="portfolio"
-                    type="url"
-                    placeholder="Paste a Google Drive, LinkedIn or portfolio link"
-                    className={
-                      fieldClass
-                    }
-                  />
-                </label>
-
-                <label className="grid gap-2">
-                  <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#071b33]/60">
-                    Additional Information
-                  </span>
-
-                  <textarea
-                    name="message"
-                    rows={5}
-                    placeholder="Tell us about the staffing requirement, your experience, skills or preferred opportunity..."
-                    className={
-                      textareaClass
-                    }
-                  />
-                </label>
+                <details className="border-t border-[#ead5db] pt-4">
+                  <summary className="cursor-pointer py-2 text-[12px] font-bold">Add staffing details (optional)</summary>
+                  <div className="mt-4 grid gap-5 md:grid-cols-2">
+                    <label className="grid gap-2"><span className="text-[10px] font-bold">Email address</span><input name="email" type="email" autoComplete="email" placeholder="name@example.com" className={fieldClass} /></label>
+                    <label className="grid gap-2"><span className="text-[10px] font-bold">Experience required</span><input name="experience" placeholder="e.g. 3 years" className={fieldClass} /></label>
+                    <label className="grid gap-2 md:col-span-2"><span className="text-[10px] font-bold">Date needed</span><input name="availability" placeholder="Immediately or a preferred date" className={fieldClass} /></label>
+                  </div>
+                  <label className="mt-5 grid gap-2"><span className="text-[10px] font-bold">Additional requirements</span><textarea name="message" rows={4} placeholder="Number of staff, required skills, working hours, salary range or any other requirements." className={textareaClass} /></label>
+                </details>
 
                 <button
                   type="submit"
                   className="group mt-2 inline-flex min-h-[58px] items-center justify-center gap-4 rounded-full bg-[#071b33] px-8 text-[10px] font-extrabold uppercase tracking-[0.18em] text-white transition duration-300 hover:-translate-y-1 hover:bg-[#b87586]"
                 >
-                  Submit Through WhatsApp
+                  Prepare Staff Request
 
                   <ArrowUpRight className="h-4 w-4 text-[#d9a3af] transition-transform duration-300 group-hover:rotate-45 group-hover:text-white" />
                 </button>

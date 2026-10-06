@@ -495,14 +495,14 @@ export default function EventsClient() {
               </SectionLabel>
 
               <h2 className="mt-7 max-w-5xl font-serif text-[48px] font-black leading-[0.91] tracking-[-0.065em] text-[#071b33] sm:text-[75px] lg:text-[94px]">
-                The Beauty Business
+                Elevate Beauty Business
                 <br />
-                Growth Room.
+                Convention 2026.
               </h2>
             </div>
 
             <p className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-[#b87586]">
-              Next date announcing soon
+              17–18 November 2026
             </p>
           </Reveal>
 
@@ -516,28 +516,28 @@ export default function EventsClient() {
                 Next Edition
               </p>
 
-              <p className="mt-7 font-serif text-[92px] font-black leading-[0.75] tracking-[-0.09em] text-[#071b33] sm:text-[125px]">
-                00
+              <p className="mt-7 font-serif text-[68px] font-black leading-[0.75] tracking-[-0.09em] text-[#071b33] sm:text-[86px]">
+                17–18
               </p>
 
               <p className="mt-7 font-serif text-[30px] font-black tracking-[-0.04em] text-[#071b33]">
-                Date to be announced
+                November 2026
               </p>
 
               <div className="mt-9 space-y-4 border-t border-[#d8d0c9] pt-6 text-[12px] font-bold text-slate-600">
                 <p className="flex items-center gap-3">
                   <CalendarDays className="h-4 w-4 text-[#b87586]" />
-                  Registration opening soon
+                  Registration is open
                 </p>
 
                 <p className="flex items-center gap-3">
                   <Clock3 className="h-4 w-4 text-[#b87586]" />
-                  Full programme to be announced
+                  Two-day beauty business convention
                 </p>
 
                 <p className="flex items-center gap-3">
                   <MapPin className="h-4 w-4 text-[#b87586]" />
-                  Nairobi, Kenya
+                  CITAM Valley Road, Nairobi
                 </p>
               </div>
             </Reveal>
@@ -584,7 +584,7 @@ export default function EventsClient() {
               </p>
 
               <h3 className="mt-6 font-serif text-[35px] font-black leading-[1.02] tracking-[-0.045em] text-[#071b33]">
-                Not another motivational talk.
+                Elevate. Grow. Lead.
               </h3>
 
               <p className="mt-6 text-[15px] leading-8 text-slate-600">
@@ -613,15 +613,22 @@ export default function EventsClient() {
               </div>
 
               <Link
-                href="/contact"
+                href="/ebbc2026"
                 className="group mt-9 inline-flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#071b33] px-7 text-sm font-extrabold text-white transition duration-300 hover:-translate-y-1 hover:bg-[#b87586]"
               >
-                Join the Priority List
+                Explore the Convention
 
                 <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" />
               </Link>
             </Reveal>
           </div>
+        </div>
+      </section>
+
+      <section className="bg-[#071b33] py-12 text-white sm:py-16">
+        <div className="mx-auto grid max-w-[1400px] gap-8 px-5 sm:px-8 lg:grid-cols-[1fr_auto] lg:items-center lg:px-10">
+          <div><p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#d9a3af]">Weekly live conversations</p><h2 className="mt-4 font-serif text-[35px] font-semibold sm:text-[46px]">Beauty Business Room Live</h2><p className="mt-4 max-w-2xl text-[14px] leading-7 text-white/70">Every Tuesday, 9:00–10:00 AM EAT, on Instagram and TikTok. Join practical conversations about running salons, spas and barbershops. Check our social pages for the next topic.</p></div>
+          <div className="flex flex-wrap gap-3"><a href="https://www.instagram.com/salonsassured/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center rounded-full bg-[#d9a3af] px-6 text-[12px] font-bold text-[#071b33]">Visit Instagram</a><a href="https://www.tiktok.com/@salonsassuredkenya" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center rounded-full border border-white/30 px-6 text-[12px] font-bold">Visit TikTok</a></div>
         </div>
       </section>
 
