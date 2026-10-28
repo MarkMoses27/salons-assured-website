@@ -21,11 +21,12 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import {
   EBBC2026,
   getEBBCTicketPriceKes,
+  getEBBCOrderPricing,
   isEBBCEarlyBirdActive,
 } from "@/lib/ebbc2026/config";
 
@@ -302,10 +303,7 @@ export default function EBBC2026TicketsPage() {
 
   const earlyBirdActive = isEBBCEarlyBirdActive();
 
-  const totalAmount = useMemo(
-    () => quantity * getEBBCTicketPriceKes(),
-    [quantity],
-  );
+  const { totalAmountKes: totalAmount } = getEBBCOrderPricing(attendees);
 
   const dayOneCount = attendees.filter(
     (attendee) => attendee.eventDate === "2026-11-17",
@@ -973,7 +971,7 @@ export default function EBBC2026TicketsPage() {
               <p className="mt-7 max-w-xl text-[15px] leading-8 text-white/65">
                 The convention runs on 17 and 18 November 2026, and every ticket
                 covers one attendee on one of those days. Anyone attending both
-                days needs two tickets, one for each day.
+                days needs two tickets, one for each day. {EBBC2026.ticket.pricingSummary}
               </p>
 
               {earlyBirdActive ? (
@@ -1391,6 +1389,9 @@ export default function EBBC2026TicketsPage() {
                                 </option>
                               ))}
                             </select>
+                            <p className="mt-2 text-xs font-bold text-[#CC8591]" aria-live="polite">
+                              Ticket price: KES {formatMoney(getEBBCTicketPriceKes(undefined, attendee.eventDate, attendee.category))}
+                            </p>
                           </label>
 
                           <label className="block">
@@ -1531,8 +1532,7 @@ export default function EBBC2026TicketsPage() {
                   </h2>
 
                   <p className="mt-4 text-[13px] leading-6 text-white/55">
-                    KES {formatMoney(getEBBCTicketPriceKes())} for one attendee
-                    on one selected day.
+                    {EBBC2026.ticket.pricingSummary}
                   </p>
 
                   {earlyBirdActive ? (
@@ -1593,8 +1593,7 @@ export default function EBBC2026TicketsPage() {
                   <div className="flex items-center justify-between border-b border-white/10 py-5">
                     <div>
                       <p className="text-[12px] font-bold text-white/55 tabular-nums">
-                        KES {formatMoney(getEBBCTicketPriceKes())} &times;{" "}
-                        {quantity}
+                        {quantity} ticket{quantity === 1 ? "" : "s"} · priced by day and category
                       </p>
 
                       <p className="mt-1 text-sm font-extrabold">

@@ -20,7 +20,6 @@ import EventCountdown from "./EventCountdown";
 import {
   EBBC2026,
   getEBBCTicketDisplayPrice,
-  isEBBCEarlyBirdActive,
 } from "@/lib/ebbc2026/config";
 
 export const dynamic = "force-dynamic";
@@ -119,20 +118,6 @@ const programmeDays = [
     day: "Day One",
     date: "17 November 2026",
     title:
-      "Skills, Careers, Professionalism and Industry Development",
-    description:
-      "A professional development day focused on strengthening skills, careers, service standards and the future of beauty-industry professionals.",
-    topics: [
-      "Professional skills and career development",
-      "Service standards and customer experience",
-      "Workplace culture and professionalism",
-      "Industry opportunities and emerging trends",
-    ],
-  },
-  {
-    day: "Day Two",
-    date: "18 November 2026",
-    title:
       "Business Growth, Leadership, Systems and Partnerships",
     description:
       "A business-focused day designed for owners, managers, suppliers, investors and partners working to build stronger beauty businesses.",
@@ -141,6 +126,20 @@ const programmeDays = [
       "Leadership and team performance",
       "Systems, structure and accountability",
       "Investment, partnerships and industry collaboration",
+    ],
+  },
+  {
+    day: "Day Two",
+    date: "18 November 2026",
+    title:
+      "Skills, Careers, Professionalism and Industry Development",
+    description:
+      "A professional development day focused on strengthening skills, careers, service standards and the future of beauty-industry professionals.",
+    topics: [
+      "Professional skills and career development",
+      "Service standards and customer experience",
+      "Workplace culture and professionalism",
+      "Industry opportunities and emerging trends",
     ],
   },
 ];
@@ -179,7 +178,6 @@ const faqs = [
 
 export default function EBBC2026Page() {
   const currentTicketPrice = getEBBCTicketDisplayPrice();
-  const earlyBirdActive = isEBBCEarlyBirdActive();
 
   return (
     <main className="overflow-hidden bg-white text-[#0D1D34]">
@@ -512,14 +510,14 @@ export default function EBBC2026Page() {
             </p>
 
             <h2 className="mt-5 [font-family:var(--font-display)] text-[48px] font-semibold leading-[0.95] tracking-[-0.045em] sm:text-[66px]">
-              {earlyBirdActive ? "Early Bird - KES 4,000" : "Choose Your Day - KES 4,500"}
+              Choose Your Day and Ticket
             </h2>
 
             <p className="mt-6 max-w-xl text-[15px] leading-8 text-[#0D1D34]/60">
               Each ticket is valid for one attendee
               on one selected event day. To attend
               both dates, buy two tickets and select
-              one date for each.
+              one date for each. {EBBC2026.ticket.pricingSummary}
             </p>
           </div>
 

@@ -16,7 +16,7 @@ import {
 
 import {
   EBBC2026,
-  getEBBCTicketPriceKes,
+  getEBBCOrderPricing,
   isEBBCEarlyBirdActive,
 } from "@/lib/ebbc2026/config";
 
@@ -95,10 +95,11 @@ export default function FastEBBCRegistrationPage() {
     currency: string;
   } | null>(null);
 
-  const ticketPrice = getEBBCTicketPriceKes();
   const earlyBird = isEBBCEarlyBirdActive();
   const selectedDayCount = form.eventDates.length;
-  const estimatedTotal = ticketPrice * Math.max(selectedDayCount, 1);
+  const { totalAmountKes: estimatedTotal } = getEBBCOrderPricing(
+    form.eventDates.map((eventDate) => ({ eventDate, category: form.category })),
+  );
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -173,7 +174,7 @@ export default function FastEBBCRegistrationPage() {
         data.order?.totalAmountKes ??
           data.order?.total_amount_kes ??
           data.totalAmountKes ??
-          ticketPrice * form.eventDates.length,
+          estimatedTotal,
       );
       const currency = (data.order?.currency || data.currency || "KES").toUpperCase();
 
@@ -403,7 +404,7 @@ export default function FastEBBCRegistrationPage() {
             </div>
             <div className="text-xs font-bold sm:text-center">CITAM Valley Road</div>
             <div className="text-xs font-black text-[#CC8591] sm:text-right">
-              KES {formatMoney(ticketPrice)} / day
+              From KES 2,500 / day
               {earlyBird ? " · Early Bird" : ""}
             </div>
           </div>
@@ -459,7 +460,7 @@ export default function FastEBBCRegistrationPage() {
                     <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0D1D34]/50">
                       Which day(s) will you attend?
                     </p>
-                    <p className="mt-1 text-xs text-[#0D1D34]/45">Select one or both days.</p>
+                    <p className="mt-1 text-xs text-[#0D1D34]/45">Select one or both days. {EBBC2026.ticket.pricingSummary}</p>
                   </div>
                   {selectedDayCount > 0 ? (
                     <p className="text-right text-xs font-black text-[#CC8591]">

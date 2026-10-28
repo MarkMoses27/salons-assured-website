@@ -29,7 +29,8 @@ export const EBBC2026 = {
     priceKes: 4500,
     standardPriceKes: 4500,
     currency: "KES",
-    displayPrice: "KES 4,500",
+    displayPrice: "From KES 2,500",
+    pricingSummary: "Day 1: KES 4,500 for everyone. Day 2: business owners KES 4,500; professionals KES 3,000; students KES 2,500.",
 
     earlyBird: {
       priceKes: 4000,
@@ -99,8 +100,35 @@ export function isEBBCEarlyBirdActive(_now: Date = new Date()) {
   return false;
 }
 
-export function getEBBCTicketPriceKes(_now: Date = new Date()) {
+const professionalCategories: readonly string[] = [
+  "Stylist", "Barber", "Braider", "Nail Technician", "Therapist",
+];
+
+export function getEBBCTicketPriceKes(
+  _now: Date = new Date(),
+  eventDate?: string,
+  category?: string,
+): number {
+  if (eventDate === EBBC2026.dates.end) {
+    if (category === "Beauty Student") return 2500;
+    if (category && professionalCategories.includes(category)) return 3000;
+  }
   return EBBC2026.ticket.standardPriceKes;
+}
+
+export function getEBBCOrderPricing(
+  attendees: readonly { eventDate: string; category: string }[],
+) {
+  const ticketPricesKes = attendees.map((attendee) =>
+    getEBBCTicketPriceKes(undefined, attendee.eventDate, attendee.category),
+  );
+  const totalAmountKes = ticketPricesKes.reduce((total, price) => total + price, 0);
+  return {
+    ticketPricesKes,
+    totalAmountKes,
+    // Preserve the existing order schema: base price less category reductions.
+    discountAmountKes: attendees.length * EBBC2026.ticket.standardPriceKes - totalAmountKes,
+  };
 }
 
 export function getEBBCTicketDisplayPrice(_now: Date = new Date()) {

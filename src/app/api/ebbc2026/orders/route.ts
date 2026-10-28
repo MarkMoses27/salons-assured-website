@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   getEBBCTicketPriceKes,
+  getEBBCOrderPricing,
   isEBBCEarlyBirdActive,
 } from "@/lib/ebbc2026/config";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -389,30 +390,11 @@ export async function POST(
         referral.id;
     }
 
-    /*
-     * Server-controlled EBBC2026 pricing.
-     *
-     * Until 31 Aug 2026 11:59:59 PM EAT:
-     * KES 4,000 per ticket.
-     *
-     * From 1 Sep 2026:
-     * KES 4,500 per ticket.
-     */
-    const pricingTime =
-      new Date();
-
-    const ticketPriceKes =
-      getEBBCTicketPriceKes(
-        pricingTime,
-      );
-
-    const earlyBirdActive =
-      isEBBCEarlyBirdActive(
-        pricingTime,
-      );
-
-    const ticketQuantity =
-      normalisedAttendees.length;
+    // Recalculate from attendee details; never accept a client-supplied amount.
+    const ticketPriceKes = getEBBCTicketPriceKes();
+    const earlyBirdActive = isEBBCEarlyBirdActive();
+    const ticketQuantity = normalisedAttendees.length;
+    const pricing = getEBBCOrderPricing(normalisedAttendees);
 
     const {
       data: order,
@@ -443,7 +425,7 @@ export async function POST(
             ticketPriceKes,
 
           discount_amount_kes:
-            0,
+            pricing.discountAmountKes,
 
           currency:
             "KES",
@@ -489,6 +471,11 @@ export async function POST(
 
     createdOrderId =
       order.id;
+
+    // Fail before tickets or payment links exist if database pricing disagrees.
+    if (Number(order.total_amount_kes) !== pricing.totalAmountKes) {
+      throw new Error("Ticket pricing could not be confirmed. Please contact the EBBC2026 team.");
+    }
 
     const ticketRows =
       normalisedAttendees.map(
