@@ -9,6 +9,7 @@ import {
 
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import WebsiteAnalytics from "../components/WebsiteAnalytics";
 import EBBCFloatingBanner from "../components/EBBCFloatingBanner";
 
 import "./globals.css";
@@ -153,6 +154,8 @@ export default function RootLayout({
         <EBBCFloatingBanner />
 
         <Footer />
+
+        <WebsiteAnalytics />
       </body>
     </html>
   );
