@@ -132,6 +132,7 @@ export default function EBBCFloatingBanner() {
 
   if (
     pathname.startsWith("/ebbc2026") ||
+    pathname === "/register" ||
     !isVisible
   ) {
     return null;
