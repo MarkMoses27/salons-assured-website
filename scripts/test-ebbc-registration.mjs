@@ -201,7 +201,7 @@ assert.equal(
 
 const group = harness();
 group.choose("Day 1", "Stylist");
-group.click("Increase ticket quantity");
+group.click("Increase attendee quantity");
 // Select the second ticket's day directly; both tickets expose day buttons.
 group
   .nodes()
@@ -229,6 +229,77 @@ assert.equal(
   pricing.getEBBCOrderPricing(group.requests[0].body.attendees).totalAmountKes,
   7000,
 );
+// Both-day selection must price each date separately and collect details once.
+for (const category of pricing.EBBC2026.participantCategories) {
+  const both = harness();
+  both.click("Both days17 & 18 November 2026");
+  both.field("category-0", category);
+  const expected =
+    4500 + pricing.getEBBCTicketPriceKes(undefined, "2026-11-18", category);
+  assert.ok(
+    both
+      .nodes()
+      .some(
+        (n) =>
+          both.text(n) ===
+          `Attendance price: KES ${new Intl.NumberFormat("en-KE").format(expected)}`,
+      ),
+  );
+  // Changing the category must immediately update the price without losing dates.
+  both.field("category-0", "Beauty Student");
+  assert.ok(
+    both.nodes().some((n) => both.text(n) === "Attendance price: KES 7,000"),
+  );
+  both.field("category-0", category);
+  both.next();
+  assert.equal(
+    both
+      .nodes()
+      .filter((n) => n.type === "input" && n.props.id?.startsWith("attendee"))
+      .length,
+    5,
+  );
+  both.fill("attendee0", "Both Days Attendee", "both@example.com");
+  both.next();
+  assert.equal(both.requests.length, 0);
+  both.next();
+  await new Promise((resolve) => setImmediate(resolve));
+  const entries = both.requests[0].body.attendees;
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].eventDate, "2026-11-17");
+  assert.equal(entries[1].eventDate, "2026-11-18");
+  assert.equal(entries[0].fullName, entries[1].fullName);
+  assert.equal(entries[0].email, entries[1].email);
+  assert.equal(pricing.getEBBCOrderPricing(entries).totalAmountKes, expected);
+}
+
+const limit = harness();
+for (let index = 0; index < 5; index++)
+  limit.click("Increase attendee quantity");
+for (let index = 0; index < 6; index++) {
+  limit
+    .nodes()
+    .filter(
+      (n) =>
+        n.type === "button" &&
+        limit.text(n) === "Both days17 & 18 November 2026",
+    )
+    [index].props.onClick();
+  limit.render();
+  limit.field(`category-${index}`, "Beauty Student");
+}
+limit.next();
+assert.ok(
+  limit
+    .nodes()
+    .some(
+      (n) =>
+        n.props.role === "alert" &&
+        limit.text(n).includes("exceeds 10 day tickets"),
+    ),
+);
+assert.equal(limit.requests.length, 0);
+
 console.log(
   "Registration checks passed: step validation, no early orders, preserved details, optional payer, referral code, group totals and duplicate-submit guard.",
 );

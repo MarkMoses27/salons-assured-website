@@ -39,6 +39,7 @@ const EVENT_DAYS = [
     shortLabel: "Day 2",
     label: "18 November 2026",
   },
+  { value: "both", shortLabel: "Both days", label: "17 & 18 November 2026" },
 ] as const;
 
 type EventDate = (typeof EVENT_DAYS)[number]["value"];
@@ -151,6 +152,22 @@ function createBlankAttendee(): AttendeeDetails {
   };
 }
 
+// Keep one form entry per person; the existing API receives one ticket per day.
+function expandAttendees(attendees: AttendeeDetails[]) {
+  return attendees.flatMap((attendee) =>
+    attendee.eventDate === "both"
+      ? ["2026-11-17", "2026-11-18"].map((eventDate) => ({
+          ...attendee,
+          eventDate,
+        }))
+      : [{ ...attendee }],
+  );
+}
+
+function getAttendeePriceKes(attendee: AttendeeDetails) {
+  return getEBBCOrderPricing(expandAttendees([attendee])).totalAmountKes;
+}
+
 function cleanText(value: unknown) {
   if (typeof value !== "string") {
     return "";
@@ -164,6 +181,7 @@ function formatMoney(amount: number) {
 }
 
 function formatTicketDate(value: string) {
+  if (value === "both") return "Both days · 17 & 18 November 2026";
   if (value === "2026-11-17") {
     return "17 November 2026";
   }
@@ -313,7 +331,9 @@ export default function EBBC2026TicketsPage() {
 
   const quantity = attendees.length;
 
-  const { totalAmountKes: totalAmount } = getEBBCOrderPricing(attendees);
+  const dayTickets = expandAttendees(attendees);
+  const dayTicketCount = dayTickets.length;
+  const { totalAmountKes: totalAmount } = getEBBCOrderPricing(dayTickets);
 
   function updateBuyer(field: keyof BuyerDetails, value: string) {
     setBuyer((current) => ({
@@ -340,7 +360,7 @@ export default function EBBC2026TicketsPage() {
   }
 
   function increaseQuantity() {
-    if (attendees.length >= 10) {
+    if (dayTicketCount >= 10) {
       return;
     }
 
@@ -370,11 +390,13 @@ export default function EBBC2026TicketsPage() {
   }
 
   function validateTickets() {
+    if (dayTicketCount > 10)
+      return "This booking exceeds 10 day tickets. Reduce the number of attendees or make a separate booking for the remaining attendees.";
     for (let index = 0; index < attendees.length; index++) {
       if (!attendees[index].eventDate)
-        return `Choose a day for Ticket ${index + 1}.`;
+        return `Choose dates for Attendee ${index + 1}.`;
       if (!attendees[index].category)
-        return `Choose a category for Ticket ${index + 1}.`;
+        return `Choose a category for Attendee ${index + 1}.`;
     }
     return "";
   }
@@ -458,7 +480,7 @@ export default function EBBC2026TicketsPage() {
 
           referralCode: buyer.referralCode.trim().toUpperCase(),
 
-          attendees: attendees.map((attendee) => ({
+          attendees: dayTickets.map((attendee) => ({
             fullName: attendee.fullName.trim(),
 
             email: attendee.email.trim().toLowerCase(),
@@ -485,7 +507,11 @@ export default function EBBC2026TicketsPage() {
         );
       }
 
-      const order = normaliseCreatedOrder(responseData, quantity, totalAmount);
+      const order = normaliseCreatedOrder(
+        responseData,
+        dayTicketCount,
+        totalAmount,
+      );
 
       if (!order) {
         throw new Error(
@@ -933,8 +959,8 @@ export default function EBBC2026TicketsPage() {
 
                     <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
                       Each QR admits one attendee on the event day printed on
-                      that ticket. Attending both convention days requires two
-                      tickets.
+                      that ticket. If you chose both days, we reserve a ticket
+                      for each date automatically.
                     </p>
                   </div>
                 </div>
@@ -946,7 +972,7 @@ export default function EBBC2026TicketsPage() {
     );
   }
 
-  const stepLabels = ["Choose tickets", "Your details", "Review & pay"];
+  const stepLabels = ["Choose attendance", "Your details", "Review & pay"];
   const allTicketsChosen = attendees.every(
     (attendee) => attendee.eventDate && attendee.category,
   );
@@ -1023,8 +1049,8 @@ export default function EBBC2026TicketsPage() {
             17–18 November · CITAM Valley Road, Nairobi
           </p>
           <p className="mt-2 text-sm leading-6 text-white/75">
-            One ticket covers one attendee on one day. For both days, add two
-            tickets.
+            Choose one day or both days. Enter each attendee’s details just
+            once.
           </p>
         </div>
       </header>
@@ -1075,16 +1101,17 @@ export default function EBBC2026TicketsPage() {
             {step === 1 ? (
               <div>
                 <p className="mt-3 text-sm leading-6 text-[#0D1D34]/70">
-                  Choose the day and category for each ticket.
+                  Choose dates and a category for each attendee. Prices update
+                  automatically.
                 </p>
                 <div className="mt-6 flex items-center justify-between border-y border-[#0D1D34]/10 py-4">
                   <span className="text-sm font-semibold">
-                    Number of tickets
+                    Number of attendees
                   </span>
                   <div className="flex items-center gap-4">
                     <button
                       type="button"
-                      aria-label="Decrease ticket quantity"
+                      aria-label="Decrease attendee quantity"
                       disabled={quantity === 1}
                       onClick={decreaseQuantity}
                       className="grid h-11 w-11 place-items-center rounded-full border disabled:opacity-30"
@@ -1096,8 +1123,8 @@ export default function EBBC2026TicketsPage() {
                     </span>
                     <button
                       type="button"
-                      aria-label="Increase ticket quantity"
-                      disabled={quantity === 10}
+                      aria-label="Increase attendee quantity"
+                      disabled={dayTicketCount >= 10}
                       onClick={increaseQuantity}
                       className="grid h-11 w-11 place-items-center rounded-full border disabled:opacity-30"
                     >
@@ -1111,18 +1138,18 @@ export default function EBBC2026TicketsPage() {
                     className="mt-6 rounded-2xl border border-[#0D1D34]/10 p-4 sm:p-5"
                   >
                     <legend className="px-2 text-sm font-bold">
-                      Ticket {index + 1}
+                      Attendee {index + 1}
                     </legend>
                     <p
                       id={`day-label-${index}`}
                       className="text-sm font-semibold"
                     >
-                      Choose one day *
+                      Choose attendance dates *
                     </p>
                     <div
                       role="group"
                       aria-labelledby={`day-label-${index}`}
-                      className="mt-3 grid grid-cols-2 gap-3"
+                      className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3"
                     >
                       {EVENT_DAYS.map((day) => (
                         <button
@@ -1166,25 +1193,25 @@ export default function EBBC2026TicketsPage() {
                     </label>
                     <p className="mt-3 text-sm font-bold" aria-live="polite">
                       {attendee.eventDate && attendee.category
-                        ? `Ticket price: KES ${formatMoney(getEBBCTicketPriceKes(undefined, attendee.eventDate, attendee.category))}`
-                        : "Choose a day and category to see your price."}
+                        ? `Attendance price: KES ${formatMoney(getAttendeePriceKes(attendee))}`
+                        : "Choose dates and a category to see your price."}
                     </p>
                   </fieldset>
                 ))}
                 <p className="mt-5 text-xs leading-6 text-[#0D1D34]/70">
                   {EBBC2026.ticket.pricingSummary}
                 </p>
-                {quantity < 10 ? (
+                {dayTicketCount < 10 ? (
                   <button
                     type="button"
                     onClick={increaseQuantity}
                     className="mt-4 min-h-11 text-sm font-bold underline underline-offset-4"
                   >
-                    Add another ticket
+                    Add another attendee
                   </button>
                 ) : (
                   <p className="mt-4 text-sm">
-                    Maximum 10 tickets per booking.
+                    Maximum 10 day tickets per booking.
                   </p>
                 )}
               </div>
@@ -1288,14 +1315,7 @@ export default function EBBC2026TicketsPage() {
                       <div className="flex justify-between gap-3">
                         <p className="font-bold">{attendee.fullName}</p>
                         <p className="shrink-0 text-sm font-bold">
-                          KES{" "}
-                          {formatMoney(
-                            getEBBCTicketPriceKes(
-                              undefined,
-                              attendee.eventDate,
-                              attendee.category,
-                            ),
-                          )}
+                          KES {formatMoney(getAttendeePriceKes(attendee))}
                         </p>
                       </div>
                       <p className="mt-2 text-sm">
@@ -1366,11 +1386,11 @@ export default function EBBC2026TicketsPage() {
               Your booking
             </p>
             <p className="mt-3 text-xl font-semibold">
-              {quantity} day ticket{quantity > 1 ? "s" : ""}
+              {quantity} attendee{quantity > 1 ? "s" : ""}
             </p>
             <p className="mt-3 text-sm leading-6 text-white/75">
-              One attendee. One selected day. Add another ticket to attend both
-              dates.
+              Choose one day or both days for each attendee. Both-day bookings
+              include a ticket for each date.
             </p>
             <div
               className="mt-6 border-t border-white/20 pt-5"
@@ -1379,7 +1399,7 @@ export default function EBBC2026TicketsPage() {
               <p className="text-sm">
                 {allTicketsChosen
                   ? "Order total"
-                  : "Choose all tickets for your total"}
+                  : "Choose dates and categories for your total"}
               </p>
               <p className="mt-2 text-3xl font-bold">
                 {allTicketsChosen ? `KES ${formatMoney(totalAmount)}` : "—"}
@@ -1398,12 +1418,12 @@ export default function EBBC2026TicketsPage() {
       >
         <div className="mx-auto flex max-w-[980px] items-center justify-between gap-3">
           <span className="text-sm">
-            {quantity} day ticket{quantity > 1 ? "s" : ""}
+            {quantity} attendee{quantity > 1 ? "s" : ""}
           </span>
           <strong>
             {allTicketsChosen
               ? `KES ${formatMoney(totalAmount)}`
-              : "Select tickets for total"}
+              : "Select dates and categories"}
           </strong>
         </div>
       </div>
