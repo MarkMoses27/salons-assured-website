@@ -5,7 +5,6 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  BadgeCheck,
   CalendarDays,
   CheckCircle2,
   CreditCard,
@@ -16,18 +15,15 @@ import {
   ShieldCheck,
   Smartphone,
   Ticket,
-  UserRound,
-  Users,
   WalletCards,
 } from "lucide-react";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import {
   EBBC2026,
   getEBBCTicketPriceKes,
   getEBBCOrderPricing,
-  isEBBCEarlyBirdActive,
 } from "@/lib/ebbc2026/config";
 
 const participantCategories = EBBC2026.participantCategories;
@@ -276,7 +272,7 @@ const LABEL_CLASS =
   "text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0D1D34]/50";
 
 export default function EBBC2026TicketsPage() {
-  const [buyer, setBuyer] = useState<BuyerDetails>({
+  const [otherBuyer, setBuyer] = useState<BuyerDetails>({
     fullName: "",
     email: "",
     phone: "",
@@ -288,6 +284,22 @@ export default function EBBC2026TicketsPage() {
   const [attendees, setAttendees] = useState<AttendeeDetails[]>([
     createBlankAttendee(),
   ]);
+
+  const [step, setStep] = useState(1);
+  const [differentBuyer, setDifferentBuyer] = useState(false);
+  const submitLock = useRef(false);
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const firstAttendee = attendees[0];
+  const buyer: BuyerDetails = differentBuyer
+    ? otherBuyer
+    : {
+        fullName: firstAttendee.fullName,
+        email: firstAttendee.email,
+        phone: firstAttendee.phone,
+        country: firstAttendee.country,
+        organisation: firstAttendee.organisation,
+        referralCode: otherBuyer.referralCode,
+      };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -301,19 +313,7 @@ export default function EBBC2026TicketsPage() {
 
   const quantity = attendees.length;
 
-  const earlyBirdActive = isEBBCEarlyBirdActive();
-
   const { totalAmountKes: totalAmount } = getEBBCOrderPricing(attendees);
-
-  const dayOneCount = attendees.filter(
-    (attendee) => attendee.eventDate === "2026-11-17",
-  ).length;
-
-  const dayTwoCount = attendees.filter(
-    (attendee) => attendee.eventDate === "2026-11-18",
-  ).length;
-
-  const unassignedCount = quantity - dayOneCount - dayTwoCount;
 
   function updateBuyer(field: keyof BuyerDetails, value: string) {
     setBuyer((current) => ({
@@ -355,57 +355,69 @@ export default function EBBC2026TicketsPage() {
     setAttendees((current) => current.slice(0, -1));
   }
 
-  function copyBuyerToAttendee(index: number) {
-    setAttendees((current) =>
-      current.map((attendee, attendeeIndex) =>
-        attendeeIndex === index
-          ? {
-              ...attendee,
-              fullName: buyer.fullName,
-              email: buyer.email,
-              phone: buyer.phone,
-              country: buyer.country || "Kenya",
-              organisation: buyer.organisation,
-            }
-          : attendee,
-      ),
-    );
+  function contactError(
+    person: { fullName: string; email: string; phone: string; country: string },
+    label: string,
+  ) {
+    if (person.fullName.trim().length < 2)
+      return `Enter the full name for ${label}.`;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(person.email.trim()))
+      return `Enter a valid email for ${label}.`;
+    if (!/^\+?[0-9]{9,15}$/.test(person.phone.replace(/[\s\-()]/g, "")))
+      return `Enter a valid phone number for ${label}.`;
+    if (!person.country.trim()) return `Enter the country for ${label}.`;
+    return "";
+  }
+
+  function validateTickets() {
+    for (let index = 0; index < attendees.length; index++) {
+      if (!attendees[index].eventDate)
+        return `Choose a day for Ticket ${index + 1}.`;
+      if (!attendees[index].category)
+        return `Choose a category for Ticket ${index + 1}.`;
+    }
+    return "";
   }
 
   function validateForm() {
-    if (
-      !buyer.fullName.trim() ||
-      !buyer.email.trim() ||
-      !buyer.phone.trim() ||
-      !buyer.country.trim()
-    ) {
-      return "Complete all required buyer details.";
+    const ticketError = validateTickets();
+    if (ticketError) return ticketError;
+    for (let index = 0; index < attendees.length; index++) {
+      const error = contactError(attendees[index], `Attendee ${index + 1}`);
+      if (error) return error;
     }
+    return contactError(buyer, "the booking contact");
+  }
 
-    for (let index = 0; index < attendees.length; index += 1) {
-      const attendee = attendees[index];
+  function moveToStep(next: number) {
+    setStep(next);
+    setFormError("");
+    requestAnimationFrame(() => {
+      stepHeading.current?.focus({ preventScroll: true });
+      document
+        .getElementById(FORM_ID)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
-      if (!attendee.eventDate) {
-        return `Select an event day for Ticket ${index + 1}.`;
-      }
-
-      if (
-        !attendee.fullName.trim() ||
-        !attendee.email.trim() ||
-        !attendee.phone.trim() ||
-        !attendee.category.trim() ||
-        !attendee.country.trim()
-      ) {
-        return `Complete all required details for Ticket ${index + 1}.`;
-      }
+  function continueRegistration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (step === 3) {
+      void handleSubmit(event);
+      return;
     }
-
-    return "";
+    const error = step === 1 ? validateTickets() : validateForm();
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    moveToStep(step + 1);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (submitLock.current) return;
     setFormError("");
     setPaymentError("");
 
@@ -422,6 +434,7 @@ export default function EBBC2026TicketsPage() {
       return;
     }
 
+    submitLock.current = true;
     setIsSubmitting(true);
 
     try {
@@ -467,7 +480,8 @@ export default function EBBC2026TicketsPage() {
 
       if (!response.ok || responseData.ok === false) {
         throw new Error(
-          responseData.message || "The registration order could not be created.",
+          responseData.message ||
+            "The registration order could not be created.",
         );
       }
 
@@ -497,6 +511,7 @@ export default function EBBC2026TicketsPage() {
         behavior: "smooth",
       });
     } finally {
+      submitLock.current = false;
       setIsSubmitting(false);
     }
   }
@@ -574,6 +589,9 @@ export default function EBBC2026TicketsPage() {
     });
 
     setAttendees([createBlankAttendee()]);
+    setStep(1);
+    setDifferentBuyer(false);
+    submitLock.current = false;
 
     setCreatedOrder(null);
     setFormError("");
@@ -748,9 +766,7 @@ export default function EBBC2026TicketsPage() {
 
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-base font-black">
-                            Pay in Full
-                          </h2>
+                          <h2 className="text-base font-black">Pay in Full</h2>
 
                           <span className="rounded-full bg-emerald-100 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">
                             Automatic
@@ -867,9 +883,7 @@ export default function EBBC2026TicketsPage() {
                   <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
 
                   <div>
-                    <p className="text-sm font-extrabold">
-                      Full payment
-                    </p>
+                    <p className="text-sm font-extrabold">Full payment</p>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
                       Paystack verifies successful full payments automatically.
@@ -897,9 +911,7 @@ export default function EBBC2026TicketsPage() {
                   <WalletCards className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
 
                   <div>
-                    <p className="text-sm font-extrabold">
-                      Installment option
-                    </p>
+                    <p className="text-sm font-extrabold">Installment option</p>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
                       Customers who want to pay mdogo mdogo can use the Equity
@@ -934,796 +946,465 @@ export default function EBBC2026TicketsPage() {
     );
   }
 
+  const stepLabels = ["Choose tickets", "Your details", "Review & pay"];
+  const allTicketsChosen = attendees.every(
+    (attendee) => attendee.eventDate && attendee.category,
+  );
+  const buttonLabel =
+    step === 1
+      ? "Next: your details"
+      : step === 2
+        ? "Next: review booking"
+        : "Continue to Payment";
+
+  function contactFields(
+    person: AttendeeDetails | BuyerDetails,
+    update: (
+      field: "fullName" | "email" | "phone" | "country" | "organisation",
+      value: string,
+    ) => void,
+    prefix: string,
+  ) {
+    return (
+      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+        {(
+          [
+            ["fullName", "Full name", "text", "Enter full name", "name"],
+            ["email", "Email address", "email", "name@example.com", "email"],
+            ["phone", "Phone number", "tel", "e.g. 0712 345 678", "tel"],
+            ["country", "Country", "text", "Country", "country-name"],
+            [
+              "organisation",
+              "Company or salon (optional)",
+              "text",
+              "Optional",
+              "organization",
+            ],
+          ] as const
+        ).map(([field, label, type, placeholder, autocomplete]) => (
+          <label className="block" key={field} htmlFor={`${prefix}-${field}`}>
+            <span className="text-sm font-semibold text-[#0D1D34]">
+              {label}
+              {field !== "organisation" ? " *" : ""}
+            </span>
+            <input
+              id={`${prefix}-${field}`}
+              type={type}
+              autoComplete={`section-${prefix} ${autocomplete}`}
+              required={field !== "organisation"}
+              value={person[field]}
+              onChange={(event) => update(field, event.target.value)}
+              placeholder={placeholder}
+              className={FIELD_CLASS}
+            />
+          </label>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-[#F6F3F2] pb-40 text-[#0D1D34] lg:pb-24">
-      <section className="relative overflow-hidden bg-[#0D1D34] px-5 pb-32 pt-32 text-white sm:px-8 sm:pt-36">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full bg-[#CC8591]/25 blur-[100px]"
-        />
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-[#CC8591]/10 blur-[110px]"
-        />
-
-        <div className="relative mx-auto max-w-[1180px]">
+    <main className="min-h-screen bg-[#F6F3F2] pb-32 text-[#0D1D34]">
+      <header className="bg-[#0D1D34] px-5 pb-12 pt-28 text-white sm:pt-32">
+        <div className="mx-auto max-w-[980px]">
           <Link
             href={EBBC2026.routes.home}
-            className="inline-flex items-center gap-2 rounded-full text-[11px] font-extrabold uppercase tracking-[0.16em] text-white/55 transition-colors hover:text-[#CC8591] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#CC8591] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D1D34]"
+            className="inline-flex items-center gap-2 text-sm text-white/75 hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to EBBC2026
+            <ArrowLeft className="h-4 w-4" /> Back to Elevate
           </Link>
-
-          <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-[#CC8591]">
-                EBBC2026 &middot; Beauty and business convention
-              </p>
-
-              <h1 className="mt-5 max-w-3xl [font-family:var(--font-display)] text-[50px] font-semibold leading-[0.92] tracking-[-0.05em] sm:text-[72px]">
-                Book a seat
-                <br />
-                for one convention day.
-              </h1>
-
-              <p className="mt-7 max-w-xl text-[15px] leading-8 text-white/65">
-                The convention runs on 17 and 18 November 2026, and every ticket
-                covers one attendee on one of those days. Anyone attending both
-                days needs two tickets, one for each day. {EBBC2026.ticket.pricingSummary}
-              </p>
-
-              {earlyBirdActive ? (
-                <div className="mt-7 flex w-fit flex-wrap items-center gap-3 rounded-2xl border border-[#CC8591]/40 bg-[#CC8591]/12 px-5 py-4">
-                  <BadgeCheck className="h-5 w-5 text-[#CC8591]" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#CC8591]">
-                    Early Bird
-                  </span>
-                  <span className="text-xl font-black text-white">
-                    {EBBC2026.ticket.earlyBird.displayPrice}
-                  </span>
-                  <span className="text-[12px] font-bold text-white/55">
-                    until {EBBC2026.ticket.earlyBird.deadlineDisplay}
-                  </span>
-                </div>
-              ) : null}
-
-              <div className="mt-9 flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[11px] font-bold text-white/75">
-                  <CalendarDays className="h-4 w-4 text-[#CC8591]" />
-                  1 ticket = 1 attendee = 1 day
-                </span>
-
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[11px] font-bold text-white/75">
-                  <CreditCard className="h-4 w-4 text-[#CC8591]" />
-                  Full payment or installments
-                </span>
-
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[11px] font-bold text-white/75">
-                  <QrCode className="h-4 w-4 text-[#CC8591]" />
-                  QR entry on your chosen day
-                </span>
-              </div>
-            </div>
-
-            <ol className="flex gap-3 lg:flex-col lg:gap-4">
-              <li className="flex-1 rounded-2xl border border-[#CC8591]/40 bg-[#CC8591]/12 p-4">
-                <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#CC8591]">
-                  Step 1
-                </p>
-
-                <p className="mt-1.5 text-[13px] font-extrabold">
-                  Attendee details
-                </p>
-              </li>
-
-              <li className="flex-1 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-white/40">
-                  Step 2
-                </p>
-
-                <p className="mt-1.5 text-[13px] font-extrabold text-white/60">
-                  Choose payment method
-                </p>
-              </li>
-
-              <li className="flex-1 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-white/40">
-                  Step 3
-                </p>
-
-                <p className="mt-1.5 text-[13px] font-extrabold text-white/60">
-                  Receive active QR ticket
-                </p>
-              </li>
-            </ol>
-          </div>
+          <p className="mt-7 text-xs font-bold uppercase tracking-[0.2em] text-[#CC8591]">
+            Elevate Beauty Business Convention 2026
+          </p>
+          <h1 className="mt-3 [font-family:var(--font-display)] text-4xl font-semibold tracking-tight sm:text-5xl">
+            Your seat at Elevate.
+          </h1>
+          <p className="mt-4 text-sm leading-6 text-white/75">
+            17–18 November · CITAM Valley Road, Nairobi
+          </p>
+          <p className="mt-2 text-sm leading-6 text-white/75">
+            One ticket covers one attendee on one day. For both days, add two
+            tickets.
+          </p>
         </div>
-      </section>
-
-      <section className="relative z-10 -mt-24 px-5 sm:px-8">
-        <div className="mx-auto max-w-[1180px]">
-          {formError ? (
-            <div
-              role="alert"
-              className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900 shadow-[0_16px_40px_rgba(13,29,52,0.08)]"
+      </header>
+      <div className="mx-auto max-w-[980px] px-5 pt-7">
+        <nav aria-label="Registration progress">
+          <ol className="grid grid-cols-3 gap-2 sm:gap-4">
+            {stepLabels.map((label, index) => (
+              <li
+                key={label}
+                aria-current={step === index + 1 ? "step" : undefined}
+                className={`border-t-2 py-3 ${step >= index + 1 ? "border-[#CC8591] text-[#0D1D34]" : "border-[#0D1D34]/15 text-[#0D1D34]/55"}`}
+              >
+                <span className="text-xs">Step {index + 1}</span>
+                <p className="mt-1 text-sm font-bold">{label}</p>
+              </li>
+            ))}
+          </ol>
+        </nav>
+        <div className="mt-5 grid items-start gap-6 lg:grid-cols-[1fr_280px]">
+          <form
+            id={FORM_ID}
+            onSubmit={continueRegistration}
+            noValidate
+            className="scroll-mt-24 rounded-3xl border border-[#0D1D34]/10 bg-white p-5 shadow-sm sm:p-8"
+          >
+            <p
+              className="text-xs font-bold uppercase tracking-widest text-[#0D1D34]/60"
+              aria-live="polite"
             >
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              Step {step} of 3
+            </p>
+            <h2
+              ref={stepHeading}
+              tabIndex={-1}
+              className="mt-2 text-2xl font-bold tracking-tight outline-none"
+            >
+              {stepLabels[step - 1]}
+            </h2>
+            {formError ? (
+              <div
+                role="alert"
+                className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+              >
+                {formError}
+              </div>
+            ) : null}
 
+            {step === 1 ? (
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.12em]">
-                  Check your details
+                <p className="mt-3 text-sm leading-6 text-[#0D1D34]/70">
+                  Choose the day and category for each ticket.
                 </p>
-
-                <p className="mt-1.5 text-[13px] leading-6">{formError}</p>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-10">
-            <form
-              id={FORM_ID}
-              onSubmit={handleSubmit}
-              className="space-y-8"
-            >
-              <div className="rounded-[28px] border border-[#0D1D34]/8 bg-white p-6 shadow-[0_28px_80px_rgba(13,29,52,0.10)] sm:p-9">
-                <div className="flex items-start gap-4 border-b border-[#0D1D34]/8 pb-6">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#CC8591]/12 text-[#CC8591]">
-                    <UserRound className="h-5 w-5" />
-                  </div>
-
-                  <div>
-                    <h2 className="[font-family:var(--font-display)] text-[26px] font-semibold leading-none tracking-[-0.03em]">
-                      Buyer details
-                    </h2>
-
-                    <p className="mt-2 text-[13px] text-[#0D1D34]/50">
-                      The person paying for and managing this registration.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                  <label className="block">
-                    <span className={LABEL_CLASS}>Full name *</span>
-
-                    <input
-                      required
-                      type="text"
-                      value={buyer.fullName}
-                      onChange={(event) =>
-                        updateBuyer("fullName", event.target.value)
-                      }
-                      placeholder="Enter full name"
-                      className={FIELD_CLASS}
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className={LABEL_CLASS}>Phone number *</span>
-
-                    <input
-                      required
-                      type="tel"
-                      value={buyer.phone}
-                      onChange={(event) =>
-                        updateBuyer("phone", event.target.value)
-                      }
-                      placeholder="e.g. 0712 345 678"
-                      className={FIELD_CLASS}
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className={LABEL_CLASS}>Email address *</span>
-
-                    <input
-                      required
-                      type="email"
-                      value={buyer.email}
-                      onChange={(event) =>
-                        updateBuyer("email", event.target.value)
-                      }
-                      placeholder="name@example.com"
-                      className={FIELD_CLASS}
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className={LABEL_CLASS}>Country *</span>
-
-                    <input
-                      required
-                      type="text"
-                      value={buyer.country}
-                      onChange={(event) =>
-                        updateBuyer("country", event.target.value)
-                      }
-                      placeholder="Country"
-                      className={FIELD_CLASS}
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className={LABEL_CLASS}>
-                      Company, salon or organisation
-                    </span>
-
-                    <input
-                      type="text"
-                      value={buyer.organisation}
-                      onChange={(event) =>
-                        updateBuyer("organisation", event.target.value)
-                      }
-                      placeholder="Optional"
-                      className={FIELD_CLASS}
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className={LABEL_CLASS}>Referral code</span>
-
-                    <input
-                      type="text"
-                      value={buyer.referralCode}
-                      onChange={(event) =>
-                        updateBuyer(
-                          "referralCode",
-                          event.target.value.toUpperCase(),
-                        )
-                      }
-                      placeholder="Optional"
-                      className={`${FIELD_CLASS} uppercase tracking-[0.08em]`}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div className="rounded-[28px] border border-[#0D1D34]/8 bg-white p-6 shadow-[0_28px_80px_rgba(13,29,52,0.10)] sm:p-9">
-                <div className="flex flex-col gap-5 border-b border-[#0D1D34]/8 pb-6 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#CC8591]/12 text-[#CC8591]">
-                      <Users className="h-5 w-5" />
-                    </div>
-
-                    <div>
-                      <h2 className="[font-family:var(--font-display)] text-[26px] font-semibold leading-none tracking-[-0.03em]">
-                        Your tickets
-                      </h2>
-
-                      <p className="mt-2 text-[13px] text-[#0D1D34]/50">
-                        Each ticket needs one attendee and one event day.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex w-fit items-center gap-3 rounded-full border border-[#0D1D34]/10 bg-[#FAF8F8] p-1.5">
+                <div className="mt-6 flex items-center justify-between border-y border-[#0D1D34]/10 py-4">
+                  <span className="text-sm font-semibold">
+                    Number of tickets
+                  </span>
+                  <div className="flex items-center gap-4">
                     <button
                       type="button"
-                      onClick={decreaseQuantity}
-                      disabled={quantity === 1}
-                      className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-[#0D1D34] hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/25 disabled:pointer-events-none disabled:opacity-25"
                       aria-label="Decrease ticket quantity"
+                      disabled={quantity === 1}
+                      onClick={decreaseQuantity}
+                      className="grid h-11 w-11 place-items-center rounded-full border disabled:opacity-30"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-
-                    <span
-                      aria-live="polite"
-                      className="min-w-9 text-center text-xl font-black tabular-nums"
-                    >
+                    <span aria-live="polite" className="text-lg font-bold">
                       {quantity}
                     </span>
-
                     <button
                       type="button"
-                      onClick={increaseQuantity}
-                      disabled={quantity === 10}
-                      className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-[#CC8591] hover:text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/25 disabled:pointer-events-none disabled:opacity-25"
                       aria-label="Increase ticket quantity"
+                      disabled={quantity === 10}
+                      onClick={increaseQuantity}
+                      className="grid h-11 w-11 place-items-center rounded-full border disabled:opacity-30"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-
-                <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#CC8591]/25 bg-[#CC8591]/8 p-5">
-                  <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
-
-                  <div>
-                    <p className="text-[13px] font-extrabold text-[#0D1D34]">
-                      One ticket = one attendee = one selected event day
-                    </p>
-
-                    <p className="mt-1.5 text-[13px] leading-6 text-[#0D1D34]/70">
-                      A ticket never covers both dates. For an attendee who wants
-                      17 and 18 November, add two tickets and select a different
-                      day on each one.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-7 space-y-7">
-                  {attendees.map((attendee, index) => (
-                    <div
-                      key={index}
-                      className="relative overflow-hidden rounded-[24px] border border-[#0D1D34]/10 bg-[#FAF8F8]"
+                {attendees.map((attendee, index) => (
+                  <fieldset
+                    key={index}
+                    className="mt-6 rounded-2xl border border-[#0D1D34]/10 p-4 sm:p-5"
+                  >
+                    <legend className="px-2 text-sm font-bold">
+                      Ticket {index + 1}
+                    </legend>
+                    <p
+                      id={`day-label-${index}`}
+                      className="text-sm font-semibold"
                     >
-                      <div className="flex flex-col gap-3 border-b border-dashed border-[#0D1D34]/15 bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                        <div className="flex items-center gap-3">
-                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#0D1D34] text-sm font-black text-white">
-                            {index + 1}
-                          </span>
-
-                          <div>
-                            <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#CC8591]">
-                              Ticket {index + 1} of {quantity}
-                            </p>
-
-                            <h3 className="mt-1 text-base font-extrabold">
-                              {attendee.fullName.trim() ||
-                                `Attendee ${index + 1}`}
-                            </h3>
-                          </div>
-                        </div>
-
+                      Choose one day *
+                    </p>
+                    <div
+                      role="group"
+                      aria-labelledby={`day-label-${index}`}
+                      className="mt-3 grid grid-cols-2 gap-3"
+                    >
+                      {EVENT_DAYS.map((day) => (
                         <button
                           type="button"
-                          onClick={() => copyBuyerToAttendee(index)}
-                          className="inline-flex h-10 w-fit items-center justify-center rounded-full border border-[#0D1D34]/12 bg-white px-4 text-[11px] font-extrabold transition-colors hover:border-[#CC8591] hover:text-[#CC8591] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/20"
+                          key={day.value}
+                          aria-pressed={attendee.eventDate === day.value}
+                          onClick={() =>
+                            updateAttendee(index, "eventDate", day.value)
+                          }
+                          className={`min-h-20 rounded-xl border-2 px-3 py-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#CC8591] ${attendee.eventDate === day.value ? "border-[#CC8591] bg-[#CC8591]/10" : "border-[#0D1D34]/10 hover:border-[#CC8591]/60"}`}
                         >
-                          Use buyer details
+                          <span className="block text-sm font-bold">
+                            {day.shortLabel}
+                          </span>
+                          <span className="mt-1 block text-xs">
+                            {day.label}
+                          </span>
                         </button>
-                      </div>
-
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute left-[-9px] top-[68px] h-[18px] w-[18px] rounded-full bg-white sm:top-[78px]"
-                      />
-
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute right-[-9px] top-[68px] h-[18px] w-[18px] rounded-full bg-white sm:top-[78px]"
-                      />
-
-                      <div className="p-5 sm:p-6">
-                        <fieldset>
-                          <legend className={LABEL_CLASS}>
-                            Choose the one event day for this ticket *
-                          </legend>
-
-                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                            {EVENT_DAYS.map((day) => {
-                              const selected = attendee.eventDate === day.value;
-
-                              return (
-                                <button
-                                  key={day.value}
-                                  type="button"
-                                  aria-pressed={selected}
-                                  onClick={() =>
-                                    updateAttendee(index, "eventDate", day.value)
-                                  }
-                                  className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/25 ${
-                                    selected
-                                      ? "border-[#CC8591] bg-white shadow-[0_10px_28px_rgba(204,133,145,0.20)]"
-                                      : "border-[#0D1D34]/10 bg-white hover:border-[#CC8591]/60"
-                                  }`}
-                                >
-                                  <div>
-                                    <p
-                                      className={`text-[9px] font-extrabold uppercase tracking-[0.18em] ${
-                                        selected
-                                          ? "text-[#CC8591]"
-                                          : "text-[#0D1D34]/40"
-                                      }`}
-                                    >
-                                      {day.shortLabel}
-                                    </p>
-
-                                    <p className="mt-1.5 text-sm font-extrabold">
-                                      {day.label}
-                                    </p>
-                                  </div>
-
-                                  <span
-                                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-colors ${
-                                      selected
-                                        ? "border-[#CC8591] bg-[#CC8591] text-white"
-                                        : "border-[#0D1D34]/18"
-                                    }`}
-                                  >
-                                    {selected ? (
-                                      <CheckCircle2 className="h-4 w-4" />
-                                    ) : null}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </fieldset>
-
-                        <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                          <label className="block">
-                            <span className={LABEL_CLASS}>Full name *</span>
-
-                            <input
-                              required
-                              type="text"
-                              value={attendee.fullName}
-                              onChange={(event) =>
-                                updateAttendee(
-                                  index,
-                                  "fullName",
-                                  event.target.value,
-                                )
-                              }
-                              placeholder="Attendee full name"
-                              className={FIELD_CLASS}
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className={LABEL_CLASS}>
-                              Participant category *
-                            </span>
-
-                            <select
-                              required
-                              value={attendee.category}
-                              onChange={(event) =>
-                                updateAttendee(
-                                  index,
-                                  "category",
-                                  event.target.value,
-                                )
-                              }
-                              className={`${FIELD_CLASS} appearance-none pr-10`}
-                            >
-                              <option value="">Select category</option>
-
-                              {participantCategories.map((category) => (
-                                <option key={category} value={category}>
-                                  {category}
-                                </option>
-                              ))}
-                            </select>
-                            <p className="mt-2 text-xs font-bold text-[#CC8591]" aria-live="polite">
-                              Ticket price: KES {formatMoney(getEBBCTicketPriceKes(undefined, attendee.eventDate, attendee.category))}
-                            </p>
-                          </label>
-
-                          <label className="block">
-                            <span className={LABEL_CLASS}>Email address *</span>
-
-                            <input
-                              required
-                              type="email"
-                              value={attendee.email}
-                              onChange={(event) =>
-                                updateAttendee(
-                                  index,
-                                  "email",
-                                  event.target.value,
-                                )
-                              }
-                              placeholder="name@example.com"
-                              className={FIELD_CLASS}
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className={LABEL_CLASS}>Phone number *</span>
-
-                            <input
-                              required
-                              type="tel"
-                              value={attendee.phone}
-                              onChange={(event) =>
-                                updateAttendee(
-                                  index,
-                                  "phone",
-                                  event.target.value,
-                                )
-                              }
-                              placeholder="e.g. 0712 345 678"
-                              className={FIELD_CLASS}
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className={LABEL_CLASS}>Country *</span>
-
-                            <input
-                              required
-                              type="text"
-                              value={attendee.country}
-                              onChange={(event) =>
-                                updateAttendee(
-                                  index,
-                                  "country",
-                                  event.target.value,
-                                )
-                              }
-                              placeholder="Country"
-                              className={FIELD_CLASS}
-                            />
-                          </label>
-
-                          <label className="block">
-                            <span className={LABEL_CLASS}>
-                              Company, salon or organisation
-                            </span>
-
-                            <input
-                              type="text"
-                              value={attendee.organisation}
-                              onChange={(event) =>
-                                updateAttendee(
-                                  index,
-                                  "organisation",
-                                  event.target.value,
-                                )
-                              }
-                              placeholder="Optional"
-                              className={FIELD_CLASS}
-                            />
-                          </label>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-[12px] leading-6 text-[#0D1D34]/45">
-                    {quantity === 10
-                      ? "Maximum of 10 tickets per registration."
-                      : "Another attendee, or a second day for the same attendee? Add a ticket."}
-                  </p>
-
+                    <label className="mt-5 block" htmlFor={`category-${index}`}>
+                      <span className="text-sm font-semibold">
+                        Participant category *
+                      </span>
+                      <select
+                        id={`category-${index}`}
+                        value={attendee.category}
+                        onChange={(event) =>
+                          updateAttendee(index, "category", event.target.value)
+                        }
+                        required
+                        className={FIELD_CLASS}
+                      >
+                        <option value="">Select category</option>
+                        {participantCategories.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="mt-3 text-sm font-bold" aria-live="polite">
+                      {attendee.eventDate && attendee.category
+                        ? `Ticket price: KES ${formatMoney(getEBBCTicketPriceKes(undefined, attendee.eventDate, attendee.category))}`
+                        : "Choose a day and category to see your price."}
+                    </p>
+                  </fieldset>
+                ))}
+                <p className="mt-5 text-xs leading-6 text-[#0D1D34]/70">
+                  {EBBC2026.ticket.pricingSummary}
+                </p>
+                {quantity < 10 ? (
                   <button
                     type="button"
                     onClick={increaseQuantity}
-                    disabled={quantity === 10}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-dashed border-[#0D1D34]/20 bg-white px-6 text-[12px] font-extrabold transition-colors hover:border-[#CC8591] hover:text-[#CC8591] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/20 disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
+                    className="mt-4 min-h-11 text-sm font-bold underline underline-offset-4"
                   >
-                    <Plus className="h-4 w-4" />
                     Add another ticket
                   </button>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="group mt-8 flex h-[60px] w-full items-center justify-center gap-3 rounded-full bg-[#CC8591] px-7 text-sm font-extrabold text-white shadow-[0_18px_40px_rgba(204,133,145,0.30)] transition hover:-translate-y-0.5 hover:bg-[#0D1D34] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Saving registration
-                    </>
-                  ) : (
-                    <>
-                      Continue to Payment
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </>
-                  )}
-                </button>
-
-                <p className="mt-4 hidden text-center text-[12px] leading-6 text-[#0D1D34]/45 lg:block">
-                  Your order will be created first. You will then choose either
-                  full payment through Paystack or installment payment through
-                  Equity Paybill.
-                </p>
+                ) : (
+                  <p className="mt-4 text-sm">
+                    Maximum 10 tickets per booking.
+                  </p>
+                )}
               </div>
-            </form>
+            ) : null}
 
-            <aside className="space-y-5 lg:sticky lg:top-28">
-              <div className="overflow-hidden rounded-[28px] bg-[#0D1D34] text-white shadow-[0_30px_90px_rgba(13,29,52,0.22)]">
-                <div className="border-b border-white/10 px-7 py-6">
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#CC8591]">
-                    Order summary
-                  </p>
+            {step === 2 ? (
+              <div>
+                <p className="mt-3 text-sm leading-6 text-[#0D1D34]/70">
+                  {quantity === 1
+                    ? "Enter your details once. Your email will receive the ticket and payment updates."
+                    : "The first attendee is the booking contact unless someone else is paying."}
+                </p>
+                {attendees.map((attendee, index) => (
+                  <fieldset
+                    key={index}
+                    className="mt-6 border-t border-[#0D1D34]/10 pt-5"
+                  >
+                    <legend className="pr-3 text-base font-bold">
+                      {quantity === 1
+                        ? "Your details"
+                        : `Attendee ${index + 1}`}
+                    </legend>
+                    <p className="mt-2 text-xs text-[#0D1D34]/70">
+                      {formatTicketDate(attendee.eventDate)} ·{" "}
+                      {attendee.category}
+                    </p>
+                    {index > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAttendees((current) =>
+                            current.map((item, i) =>
+                              i === index
+                                ? {
+                                    ...current[0],
+                                    eventDate: item.eventDate,
+                                    category: item.category,
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                        className="mt-3 min-h-11 text-sm font-semibold underline underline-offset-4"
+                      >
+                        Use first attendee’s details
+                      </button>
+                    ) : null}
+                    {contactFields(
+                      attendee,
+                      (field, value) => updateAttendee(index, field, value),
+                      `attendee${index}`,
+                    )}
+                  </fieldset>
+                ))}
+                <label className="mt-7 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl bg-[#F6F3F2] p-4 text-sm font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={differentBuyer}
+                    onChange={(event) =>
+                      setDifferentBuyer(event.target.checked)
+                    }
+                    className="h-5 w-5 accent-[#0D1D34]"
+                  />{" "}
+                  Someone else is paying
+                </label>
+                {differentBuyer ? (
+                  <fieldset className="mt-6">
+                    <legend className="font-bold">Booking contact</legend>
+                    <p className="mt-2 text-sm text-[#0D1D34]/70">
+                      This person will receive payment updates and manage the
+                      booking.
+                    </p>
+                    {contactFields(otherBuyer, updateBuyer, "contact")}
+                  </fieldset>
+                ) : null}
+                <label htmlFor="referral-code" className="mt-6 block">
+                  <span className="text-sm font-semibold">
+                    Referral code (optional)
+                  </span>
+                  <input
+                    id="referral-code"
+                    value={otherBuyer.referralCode}
+                    onChange={(event) =>
+                      updateBuyer("referralCode", event.target.value)
+                    }
+                    className={FIELD_CLASS}
+                    placeholder="Enter code"
+                  />
+                </label>
+              </div>
+            ) : null}
 
-                  <h2 className="mt-3 [font-family:var(--font-display)] text-[30px] font-semibold leading-none tracking-[-0.03em]">
-                    EBBC2026 day ticket
-                  </h2>
-
-                  <p className="mt-4 text-[13px] leading-6 text-white/55">
-                    {EBBC2026.ticket.pricingSummary}
-                  </p>
-
-                  {earlyBirdActive ? (
-                    <div className="mt-4 rounded-2xl border border-[#CC8591]/30 bg-[#CC8591]/10 p-4">
-                      <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#CC8591]">
-                        Early Bird Offer
-                      </p>
-                      <div className="mt-2 flex items-end gap-3">
-                        <span className="text-2xl font-black text-white">
-                          KES {formatMoney(EBBC2026.ticket.earlyBird.priceKes)}
-                        </span>
-                        <span className="pb-0.5 text-sm font-bold text-white/35 line-through">
-                          KES {formatMoney(EBBC2026.ticket.standardPriceKes)}
-                        </span>
+            {step === 3 ? (
+              <div>
+                <p className="mt-3 text-sm leading-6 text-[#0D1D34]/70">
+                  Check your details before continuing to payment.
+                </p>
+                <ul className="mt-6 divide-y divide-[#0D1D34]/10">
+                  {attendees.map((attendee, index) => (
+                    <li key={index} className="py-5 first:pt-0">
+                      <div className="flex justify-between gap-3">
+                        <p className="font-bold">{attendee.fullName}</p>
+                        <p className="shrink-0 text-sm font-bold">
+                          KES{" "}
+                          {formatMoney(
+                            getEBBCTicketPriceKes(
+                              undefined,
+                              attendee.eventDate,
+                              attendee.category,
+                            ),
+                          )}
+                        </p>
                       </div>
-                      <p className="mt-2 text-[11px] font-bold text-white/50">
-                        Valid through 31 August 2026, 11:59 PM EAT.
+                      <p className="mt-2 text-sm">
+                        {formatTicketDate(attendee.eventDate)} ·{" "}
+                        {attendee.category}
                       </p>
-                    </div>
+                      <p className="mt-1 break-all text-sm text-[#0D1D34]/70">
+                        {attendee.email}
+                      </p>
+                      <p className="mt-1 text-sm text-[#0D1D34]/70">
+                        {attendee.phone} · {attendee.country}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 rounded-xl bg-[#F6F3F2] p-4 text-sm">
+                  <p className="font-bold">Booking contact</p>
+                  <p className="mt-2">{buyer.fullName}</p>
+                  <p className="mt-1 break-all">{buyer.email}</p>
+                  <p className="mt-1">{buyer.phone}</p>
+                  {buyer.referralCode ? (
+                    <p className="mt-2">Referral code: {buyer.referralCode}</p>
                   ) : null}
                 </div>
-
-                <div className="px-7 py-6">
-                  <div className="space-y-3 border-b border-white/10 pb-5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] text-white/55">
-                        17 November
-                      </span>
-
-                      <span className="text-[13px] font-extrabold tabular-nums">
-                        {dayOneCount} ticket{dayOneCount === 1 ? "" : "s"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] text-white/55">
-                        18 November
-                      </span>
-
-                      <span className="text-[13px] font-extrabold tabular-nums">
-                        {dayTwoCount} ticket{dayTwoCount === 1 ? "" : "s"}
-                      </span>
-                    </div>
-
-                    {unassignedCount > 0 ? (
-                      <div className="flex items-center justify-between rounded-xl bg-[#CC8591]/12 px-3 py-2">
-                        <span className="text-[12px] font-bold text-[#CC8591]">
-                          Day not chosen yet
-                        </span>
-
-                        <span className="text-[12px] font-extrabold tabular-nums text-[#CC8591]">
-                          {unassignedCount}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center justify-between border-b border-white/10 py-5">
-                    <div>
-                      <p className="text-[12px] font-bold text-white/55 tabular-nums">
-                        {quantity} ticket{quantity === 1 ? "" : "s"} · priced by day and category
-                      </p>
-
-                      <p className="mt-1 text-sm font-extrabold">
-                        Day ticket
-                      </p>
-                    </div>
-
-                    <p className="text-base font-extrabold tabular-nums">
-                      KES {formatMoney(totalAmount)}
-                    </p>
-                  </div>
-
-                  <div className="flex items-end justify-between py-6">
-                    <div>
-                      <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/40">
-                        Order total
-                      </p>
-
-                      <p className="mt-1 text-[13px] text-white/50">
-                        Full payment or installments
-                      </p>
-                    </div>
-
-                    <p className="[font-family:var(--font-display)] text-[34px] font-semibold leading-none tracking-[-0.04em] text-[#CC8591] tabular-nums">
-                      KES {formatMoney(totalAmount)}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 border-t border-white/10 pt-6">
-                    <div className="flex items-start gap-3 text-[12px] leading-6 text-white/60">
-                      <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-[#CC8591]" />
-
-                      <span>
-                        One ticket = one attendee = one selected event day.
-                      </span>
-                    </div>
-
-                    <div className="flex items-start gap-3 text-[12px] leading-6 text-white/60">
-                      <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#CC8591]" />
-
-                      <span>
-                        Attending both 17 and 18 November needs two tickets.
-                      </span>
-                    </div>
-
-                    <div className="flex items-start gap-3 text-[12px] leading-6 text-white/60">
-                      <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-[#CC8591]" />
-
-                      <span>
-                        Pay in full automatically with Paystack, or choose
-                        Equity Paybill for installments.
-                      </span>
-                    </div>
-
-                    <div className="flex items-start gap-3 text-[12px] leading-6 text-white/60">
-                      <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-[#CC8591]" />
-
-                      <span>
-                        QR codes activate when the complete order balance has
-                        been cleared.
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <p className="mt-5 text-sm leading-6 text-[#0D1D34]/70">
+                  Continue to create your booking, then choose Paystack for full
+                  payment or Equity Paybill for installments. Your QR ticket
+                  activates after full payment.
+                </p>
               </div>
+            ) : null}
 
-              <div className="rounded-[24px] border border-[#0D1D34]/8 bg-white p-6">
-                <div className="flex items-start gap-3">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#CC8591]" />
-
-                  <div>
-                    <p className="text-sm font-extrabold">
-                      Payment happens after this step
-                    </p>
-
-                    <p className="mt-2 text-[13px] leading-6 text-[#0D1D34]/55">
-                      Saving your details creates the registration order. On the
-                      next screen you choose Paystack for full payment or Equity
-                      Paybill if you want to pay in installments.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex items-center gap-5 border-t border-[#0D1D34]/8 pt-5 text-[11px] font-bold text-[#0D1D34]/45">
-                  <span className="inline-flex items-center gap-2">
-                    <Smartphone className="h-4 w-4 text-[#CC8591]" />
-                    Paystack
-                  </span>
-
-                  <span className="inline-flex items-center gap-2">
-                    <WalletCards className="h-4 w-4 text-[#CC8591]" />
-                    Installments
-                  </span>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </div>
-      </section>
-
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#0D1D34]/8 bg-white/95 px-5 py-4 shadow-[0_-12px_40px_rgba(13,29,52,0.10)] backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-[560px] items-center gap-4">
-          <div className="shrink-0">
-            <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#0D1D34]/40">
-              {quantity} ticket{quantity === 1 ? "" : "s"} &middot; order total
-            </p>
-
-            <p className="mt-1 text-lg font-black leading-none tabular-nums">
-              KES {formatMoney(totalAmount)}
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            form={FORM_ID}
-            disabled={isSubmitting}
-            className="inline-flex h-[54px] flex-1 items-center justify-center gap-2 rounded-full bg-[#CC8591] px-5 text-[13px] font-extrabold text-white shadow-[0_14px_30px_rgba(204,133,145,0.30)] transition-colors hover:bg-[#0D1D34] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#CC8591]/30 disabled:cursor-not-allowed disabled:opacity-60"
+            <div className="mt-8 flex items-center gap-3 border-t border-[#0D1D34]/10 pt-6">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => moveToStep(step - 1)}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#0D1D34]/20 px-5 text-sm font-bold disabled:opacity-40"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+              ) : null}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#0D1D34] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#9C5362] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#CC8591] disabled:opacity-60"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Saving
+                    registration
+                  </>
+                ) : (
+                  <>
+                    {buttonLabel}
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+          <aside
+            className="hidden rounded-3xl bg-[#0D1D34] p-6 text-white lg:sticky lg:top-28 lg:block"
+            aria-label="Booking summary"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Saving
-              </>
-            ) : (
-              <>
-                Continue to Payment
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/70">
+              Your booking
+            </p>
+            <p className="mt-3 text-xl font-semibold">
+              {quantity} day ticket{quantity > 1 ? "s" : ""}
+            </p>
+            <p className="mt-3 text-sm leading-6 text-white/75">
+              One attendee. One selected day. Add another ticket to attend both
+              dates.
+            </p>
+            <div
+              className="mt-6 border-t border-white/20 pt-5"
+              aria-live="polite"
+            >
+              <p className="text-sm">
+                {allTicketsChosen
+                  ? "Order total"
+                  : "Choose all tickets for your total"}
+              </p>
+              <p className="mt-2 text-3xl font-bold">
+                {allTicketsChosen ? `KES ${formatMoney(totalAmount)}` : "—"}
+              </p>
+            </div>
+            <p className="mt-5 text-xs leading-6 text-white/75">
+              Full payment or installments. QR tickets activate after full
+              payment.
+            </p>
+          </aside>
+        </div>
+      </div>
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-[#0D1D34]/10 bg-white px-5 py-4 lg:hidden"
+        aria-live="polite"
+      >
+        <div className="mx-auto flex max-w-[980px] items-center justify-between gap-3">
+          <span className="text-sm">
+            {quantity} day ticket{quantity > 1 ? "s" : ""}
+          </span>
+          <strong>
+            {allTicketsChosen
+              ? `KES ${formatMoney(totalAmount)}`
+              : "Select tickets for total"}
+          </strong>
         </div>
       </div>
     </main>
