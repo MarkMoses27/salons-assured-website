@@ -830,6 +830,7 @@ export default function EBBC2026PaymentAdminPage() {
   const [onsiteBusy, setOnsiteBusy] = useState(false);
   const onsiteLock = useRef(false);
   const [onsiteNotice, setOnsiteNotice] = useState("");
+  const [checkInNotice, setCheckInNotice] = useState<{ orderId: string; message: string } | null>(null);
   const [attendance, setAttendance] = useState("");
   const [category, setCategory] = useState("");
   const [paymentChoice, setPaymentChoice] = useState<string>(defaultPaymentChoice);
@@ -846,7 +847,7 @@ export default function EBBC2026PaymentAdminPage() {
     if (onsiteLock.current) return;
     onsiteLock.current = true;
     setOnsiteBusy(true);
-    setOnsiteNotice("");
+    setCheckInNotice(null);
     try {
       const token = await getAccessToken();
       if (!token) throw new Error("Sign in again to check in an attendee.");
@@ -856,7 +857,7 @@ export default function EBBC2026PaymentAdminPage() {
         body: JSON.stringify({ ticketId: row.ticketId, gateName: "Main Entrance" }),
       });
       const result = await response.json();
-      setOnsiteNotice(result.message || "Check-in could not be completed.");
+      setCheckInNotice({ orderId: row.orderId, message: result.message || "Check-in could not be completed." });
       if (result.scanResult === "accepted" || result.scanResult === "already_used") {
         setRegistrations(current => current.map(ticket =>
           ticket.ticketId === row.ticketId ? { ...ticket, checkInStatus: "checked_in" } : ticket
@@ -864,7 +865,7 @@ export default function EBBC2026PaymentAdminPage() {
         await loadDashboard();
       }
     } catch (error) {
-      setOnsiteNotice(error instanceof Error ? error.message : "Check-in could not be completed.");
+      setCheckInNotice({ orderId: row.orderId, message: error instanceof Error ? error.message : "Check-in could not be completed." });
     } finally {
       onsiteLock.current = false;
       setOnsiteBusy(false);
@@ -915,17 +916,6 @@ export default function EBBC2026PaymentAdminPage() {
       onsiteLock.current = false;
       setOnsiteBusy(false);
     }
-  }
-
-  function checkInAction(row: RegistrationRow) {
-    if (row.checkInStatus === "checked_in") return null;
-    if (row.paymentState !== "paid" || row.eventDate !== eventDay || !row.ticketId) return null;
-    return (
-      <button type="button" disabled={onsiteBusy} onClick={() => void checkInFromResult(row)}
-        className="m-1 min-h-10 rounded-full bg-[#0D1D34] px-4 text-xs font-bold text-white disabled:opacity-50">
-        Check in
-      </button>
-    );
   }
 
   async function loadDashboard() {
@@ -2677,7 +2667,9 @@ export default function EBBC2026PaymentAdminPage() {
                   {bookings.map(tickets => {
                     const booking = tickets[0];
                     const issuedTickets = tickets.filter(ticket => ticket.ticketId);
-                    const canCheckIn = booking.paymentState === "paid" && issuedTickets.some(ticket => ticket.eventDate === eventDay && ticket.checkInStatus !== "checked_in");
+                    const todaysTickets = booking.paymentState === "paid"
+                      ? issuedTickets.filter(ticket => ticket.eventDate === eventDay)
+                      : [];
                     return (
                       <tr role="row" key={booking.orderId} className="grid grid-cols-2 gap-3 px-4 py-4 transition-colors hover:bg-[#FCFAFC] sm:px-6 lg:table-row lg:p-0">
                         <th scope="row" className="col-span-2 min-w-0 break-words text-left font-normal lg:max-w-64 lg:py-4 lg:pl-6 lg:pr-3">
@@ -2697,7 +2689,7 @@ export default function EBBC2026PaymentAdminPage() {
                         </td>
                         <td role="cell" className="col-span-2 lg:max-w-64 lg:px-3 lg:py-4">
                           {issuedTickets.length ? (
-                            <details open={canCheckIn} className="group">
+                            <details className="group">
                               <summary className="flex min-h-9 w-fit cursor-pointer list-none items-center gap-1.5 rounded-lg bg-[#F5F1F6] px-2.5 text-xs font-bold text-[#542B3D] hover:bg-[#F6DFE5] [&::-webkit-details-marker]:hidden">
                                 <TicketCheck aria-hidden="true" className="h-3.5 w-3.5" />
                                 {issuedTickets.length} {issuedTickets.length === 1 ? "ticket" : "tickets"}
@@ -2711,7 +2703,6 @@ export default function EBBC2026PaymentAdminPage() {
                                     {ticket.participantCategory && <p className="mt-0.5 text-slate-600">{ticket.participantCategory}</p>}
                                     <div className="mt-1 flex flex-wrap items-center gap-1">
                                       <CheckInBadge status={ticket.checkInStatus} />
-                                      {checkInAction(ticket)}
                                     </div>
                                   </li>
                                 ))}
@@ -2732,6 +2723,32 @@ export default function EBBC2026PaymentAdminPage() {
                               <Eye aria-hidden="true" className="h-4 w-4" /> View booking
                             </button>
                           </div>
+                          {todaysTickets.length > 0 && (
+                            <ul className="mt-2 grid gap-2">
+                              {todaysTickets.map(ticket => {
+                                const showName = todaysTickets.length > 1 || ticket.attendeeFullName !== booking.buyerFullName;
+                                return (
+                                  <li key={ticket.ticketId} className="flex flex-wrap items-center gap-2">
+                                    {ticket.checkInStatus === "checked_in" ? (
+                                      <>
+                                        <CheckInBadge status={ticket.checkInStatus} />
+                                        {showName && <span className="text-xs font-semibold">{ticket.attendeeFullName}</span>}
+                                      </>
+                                    ) : (
+                                      <button type="button" disabled={onsiteBusy} onClick={() => void checkInFromResult(ticket)}
+                                        aria-label={`Check in ${ticket.attendeeFullName} (${ticket.ticketNumber})`}
+                                        className="min-h-11 rounded-lg bg-[#0D1D34] px-3 text-xs font-bold text-white hover:bg-[#26364E] disabled:opacity-50">
+                                        {showName ? `Check in · ${ticket.attendeeFullName}` : "Check in"}
+                                      </button>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                          {checkInNotice?.orderId === booking.orderId && (
+                            <p role="status" className="mt-2 max-w-56 text-xs font-semibold text-slate-700">{checkInNotice.message}</p>
+                          )}
                         </td>
                       </tr>
                     );
