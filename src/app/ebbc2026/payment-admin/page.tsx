@@ -2606,18 +2606,22 @@ export default function EBBC2026PaymentAdminPage() {
               </div>
             </div>
 
-            <div role="group" aria-label="Filter by payment status" className="flex flex-wrap gap-1 border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
-              {([
-                ["all", "All bookings", summary.totalOrders],
-                ["paid", "Paid", summary.paidOrders],
-                ["partial", "Partial", summary.partialOrders],
-                ["unpaid", "Unpaid", summary.unpaidOrders],
-              ] as const).map(([value, label, count]) => (
-                <button key={value} type="button" aria-pressed={paymentFilter === value} onClick={() => setPaymentFilter(value)}
-                  className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold transition-colors ${paymentFilter === value ? "bg-[#F6DFE5] text-[#542B3D]" : "text-slate-600 hover:bg-slate-100"}`}>
-                  {label}<span className="rounded-full bg-white/80 px-1.5 py-0.5 tabular-nums">{count}</span>
-                </button>
-              ))}
+            <div className="border-b border-[#E4DCE6] bg-[#F7F3F8] px-4 py-3 sm:px-6">
+              <div role="group" aria-labelledby="booking-payment-status" className="flex flex-wrap items-center gap-2">
+                <span id="booking-payment-status" className="w-full text-sm font-bold text-[#0D1D34] sm:mr-2 sm:w-auto">Payment status</span>
+                {([
+                  ["all", "All payments", summary.totalOrders],
+                  ["paid", "Paid", summary.paidOrders],
+                  ["partial", "Partial", summary.partialOrders],
+                  ["unpaid", "Unpaid", summary.unpaidOrders],
+                ] as const).map(([value, label, count]) => (
+                  <button key={value} type="button" aria-pressed={paymentFilter === value} onClick={() => setPaymentFilter(value)}
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#542B3D] ${paymentFilter === value ? "border-[#0D1D34] bg-[#0D1D34] text-white" : "border-[#A99AAC] bg-white text-[#0D1D34] hover:border-[#A65D6A] hover:bg-[#FAEEF0]"}`}>
+                    {label}
+                    <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${paymentFilter === value ? "bg-white/20 text-white" : "bg-[#F0EAF2] text-[#542B3D]"}`}>{count}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {dashboardLoading &&
