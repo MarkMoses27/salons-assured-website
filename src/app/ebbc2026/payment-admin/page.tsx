@@ -2667,9 +2667,7 @@ export default function EBBC2026PaymentAdminPage() {
                   {bookings.map(tickets => {
                     const booking = tickets[0];
                     const issuedTickets = tickets.filter(ticket => ticket.ticketId);
-                    const todaysTickets = booking.paymentState === "paid"
-                      ? issuedTickets.filter(ticket => ticket.eventDate === eventDay)
-                      : [];
+                    const paidTickets = booking.paymentState === "paid" ? issuedTickets : [];
                     return (
                       <tr role="row" key={booking.orderId} className="grid grid-cols-2 gap-3 px-4 py-4 transition-colors hover:bg-[#FCFAFC] sm:px-6 lg:table-row lg:p-0">
                         <th scope="row" className="col-span-2 min-w-0 break-words text-left font-normal lg:max-w-64 lg:py-4 lg:pl-6 lg:pr-3">
@@ -2723,10 +2721,12 @@ export default function EBBC2026PaymentAdminPage() {
                               <Eye aria-hidden="true" className="h-4 w-4" /> View booking
                             </button>
                           </div>
-                          {todaysTickets.length > 0 && (
+                          {paidTickets.length > 0 && (
                             <ul className="mt-2 grid gap-2">
-                              {todaysTickets.map(ticket => {
-                                const showName = todaysTickets.length > 1 || ticket.attendeeFullName !== booking.buyerFullName;
+                              {paidTickets.map(ticket => {
+                                const showName = paidTickets.length > 1 || ticket.attendeeFullName !== booking.buyerFullName;
+                                const isTicketDay = ticket.eventDate === eventDay;
+                                const dateLabel = formatEventDate(ticket.eventDate);
                                 return (
                                   <li key={ticket.ticketId} className="flex flex-wrap items-center gap-2">
                                     {ticket.checkInStatus === "checked_in" ? (
@@ -2735,11 +2735,18 @@ export default function EBBC2026PaymentAdminPage() {
                                         {showName && <span className="text-xs font-semibold">{ticket.attendeeFullName}</span>}
                                       </>
                                     ) : (
-                                      <button type="button" disabled={onsiteBusy} onClick={() => void checkInFromResult(ticket)}
-                                        aria-label={`Check in ${ticket.attendeeFullName} (${ticket.ticketNumber})`}
-                                        className="min-h-11 rounded-lg bg-[#0D1D34] px-3 text-xs font-bold text-white hover:bg-[#26364E] disabled:opacity-50">
-                                        {showName ? `Check in · ${ticket.attendeeFullName}` : "Check in"}
-                                      </button>
+                                      <div>
+                                        <button type="button" disabled={onsiteBusy || !isTicketDay} onClick={() => void checkInFromResult(ticket)}
+                                          aria-label={`Check in ${ticket.attendeeFullName} · ${dateLabel} (${ticket.ticketNumber})`}
+                                          className="min-h-11 rounded-lg border border-transparent bg-[#0D1D34] px-3 text-xs font-bold text-white hover:bg-[#26364E] disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-600">
+                                          {showName ? `Check in · ${ticket.attendeeFullName}` : "Check in"}
+                                        </button>
+                                        {(!isTicketDay || paidTickets.length > 1) && (
+                                          <p className="mt-1 text-xs text-slate-600">
+                                            {isTicketDay ? dateLabel : `Ticket date: ${dateLabel}`}
+                                          </p>
+                                        )}
+                                      </div>
                                     )}
                                   </li>
                                 );
