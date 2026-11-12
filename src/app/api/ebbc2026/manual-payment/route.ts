@@ -558,23 +558,24 @@ export async function GET(
       );
     }
 
-    const orders =
-      (
-        ordersResult.data ||
-        []
-      ) as OrderRecord[];
-
-    const tickets =
-      (
-        ticketsResult.data ||
-        []
-      ) as TicketRecord[];
-
-    const payments =
-      (
-        paymentsResult.data ||
-        []
-      ) as PaymentRecord[];
+    const payments = (paymentsResult.data ?? []) as PaymentRecord[];
+    const successfulPaymentOrderIds = new Set(payments.map((payment) => payment.order_id));
+    // These three orders were used to test registration. Keep the source records.
+    const testOrderNumbers = new Set([
+      "EBBC26-ORD-000019",
+      "EBBC26-ORD-000027",
+      "EBBC26-ORD-000028",
+    ]);
+    const orders = ((ordersResult.data ?? []) as OrderRecord[]).filter(
+      (order) =>
+        !testOrderNumbers.has(order.order_number) ||
+        order.payment_status === "paid" ||
+        successfulPaymentOrderIds.has(order.id),
+    );
+    const includedOrderIds = new Set(orders.map((order) => order.id));
+    const tickets = ((ticketsResult.data ?? []) as TicketRecord[]).filter(
+      (ticket) => includedOrderIds.has(ticket.order_id),
+    );
 
     const checkIns =
       (
