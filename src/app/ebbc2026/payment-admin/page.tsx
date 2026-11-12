@@ -2362,11 +2362,13 @@ export default function EBBC2026PaymentAdminPage() {
 
           <section aria-labelledby="overview-heading" aria-busy={dashboardLoading}
             className="mt-8 rounded-[30px] border border-[#26364E] bg-[#101C30] bg-[radial-gradient(ellipse_at_top_right,#3C3047,transparent_55%)] p-5 text-white shadow-[0_24px_60px_rgba(13,29,52,0.22)] sm:p-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <h2 id="overview-heading" className="text-2xl font-black tracking-tight">Event overview</h2>
-              <nav aria-label="Dashboard shortcuts" className="flex flex-wrap gap-2 text-xs font-bold">
+            <div className="relative isolate flex min-h-44 flex-col justify-end overflow-hidden rounded-2xl border border-white/15 bg-[#141F35] p-5 sm:min-h-52 sm:justify-center sm:p-8">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[url('/ebbc2026/admin-beauty-overview.webp')] bg-cover bg-[position:80%_44%] sm:bg-[position:center_44%]" />
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(0deg,#101C30_0%,#101C30C9_38%,#101C3033_100%)] sm:bg-[linear-gradient(90deg,#101C30_0%,#101C30ED_26%,#101C30A6_45%,#101C301A_82%)]" />
+              <h2 id="overview-heading" className="text-3xl font-black tracking-tight sm:text-4xl">Event overview</h2>
+              <nav aria-label="Dashboard shortcuts" className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
                 <a className="rounded-full bg-[#F0B6C2] px-4 py-2 text-[#151C30] hover:bg-[#FFD1DA]" href="#registration-records">Find a booking</a>
-                <a className="rounded-full border border-white/25 px-4 py-2 hover:bg-white/10" href="#payment-verification">Verify Paybill payment</a>
+                <a className="rounded-full border border-white/35 bg-[#101C30]/80 px-4 py-2 hover:bg-[#26364E]" href="#payment-verification">Verify Paybill payment</a>
               </nav>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
