@@ -2498,42 +2498,68 @@ export default function EBBC2026PaymentAdminPage() {
             </button>
           </div>
 
-          <section className="mt-6 rounded-2xl border bg-white p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <section className="mt-6 overflow-hidden rounded-3xl border border-[#0D1D34]/10 bg-white shadow-sm" aria-labelledby="onsite-heading">
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0D1D34] px-5 py-5 text-white sm:px-7">
               <div>
-                <h2 className="text-lg font-bold">On-site attendance</h2>
-                <p className="mt-1 text-sm">Search below. Add an attendee only if you cannot find their booking.</p>
+                <h2 id="onsite-heading" className="text-xl font-bold">{addingAttendee ? "Add attendee" : "On-site attendance"}</h2>
+                {!addingAttendee && <p className="mt-1 text-sm text-white/75">Search existing bookings below or add an attendee.</p>}
               </div>
-              <button type="button" disabled={onsiteBusy} aria-expanded={addingAttendee}
+              <button type="button" disabled={onsiteBusy} aria-expanded={addingAttendee} aria-controls={addingAttendee ? "onsite-form" : undefined}
                 onClick={() => { setAddingAttendee(!addingAttendee); setOnsiteNotice(""); }}
-                className="min-h-11 rounded-full bg-[#0D1D34] px-5 text-sm font-bold text-white">
+                className="min-h-11 rounded-full border border-white/25 bg-white/10 px-5 text-sm font-bold text-white hover:bg-white/20 disabled:opacity-50">
                 {addingAttendee ? "Close form" : "Add attendee"}
               </button>
             </div>
-            {onsiteNotice && <p role="status" className="mt-4 rounded-xl bg-[#F7F5F5] p-3 text-sm font-semibold">{onsiteNotice}</p>}
+            {onsiteNotice && <p role="status" className="mx-5 mt-4 rounded-xl bg-[#F7F5F5] p-3 text-sm font-semibold">{onsiteNotice}</p>}
             {addingAttendee && (
-              <form onSubmit={addAttendee} className="mt-4 space-y-4">
-                <fieldset disabled={onsiteBusy} className="grid gap-3 sm:grid-cols-2 [&_input]:mt-1 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:p-2 [&_select]:mt-1 [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:p-2">
-                  <label>Full name<input name="fullName" autoComplete="name" required minLength={2} /></label>
-                  <label>Booking phone<input name="phone" type="tel" autoComplete="tel" required /></label>
-                  <label>Attendance dates<select required value={attendance} onChange={event => setAttendance(event.target.value)}>
-                    <option value="">Choose dates</option>
-                    {attendanceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select></label>
-                  <label>Participant category<select required value={category} onChange={event => setCategory(event.target.value)}>
-                    <option value="">Choose category</option>
-                    {EBBC2026.participantCategories.map(item => <option key={item}>{item}</option>)}
-                  </select></label>
-                  <label>Payment<select value={paymentChoice} onChange={event => setPaymentChoice(event.target.value)}>
-                    <option value="paying_now">Paying now</option>
-                    <option value="already_paid">Already paid via Paybill</option>
-                  </select></label>
+              <form id="onsite-form" onSubmit={addAttendee} className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_280px] sm:p-7">
+                <fieldset disabled={onsiteBusy} className="min-w-0 space-y-5">
+                  <legend className="sr-only">Attendee details</legend>
+                  <div className="grid gap-4 sm:grid-cols-2 [&_input]:mt-2 [&_input]:min-h-12 [&_input]:w-full [&_input]:rounded-xl [&_input]:border [&_input]:border-[#0D1D34]/20 [&_input]:bg-[#F7F5F5] [&_input]:px-3 [&_input]:font-normal">
+                    <label className="text-sm font-semibold">Full name<input name="fullName" autoComplete="name" placeholder="Enter full name" required minLength={2} /></label>
+                    <label className="text-sm font-semibold">Booking phone<input name="phone" type="tel" autoComplete="tel" placeholder="e.g. 0712 345 678" required /></label>
+                  </div>
+                  <fieldset>
+                    <legend className="text-sm font-semibold">Attendance dates</legend>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                      {attendanceOptions.map(option => (
+                        <label key={option.value} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-[#0D1D34]/15 px-3 py-2 text-sm font-medium has-[:checked]:border-[#A65D6A] has-[:checked]:bg-[#FAEEF0]">
+                          <input type="radio" name="attendance" required value={option.value} checked={attendance === option.value} onChange={() => setAttendance(option.value)} className="size-4 shrink-0 accent-[#0D1D34]" />
+                          {option.label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <label className="block text-sm font-semibold">Participant category
+                    <select required value={category} onChange={event => setCategory(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-[#0D1D34]/20 bg-[#F7F5F5] px-3 font-normal">
+                      <option value="">Choose category</option>
+                      {EBBC2026.participantCategories.map(item => <option key={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <fieldset>
+                    <legend className="text-sm font-semibold">Payment</legend>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      {[["paying_now", "Paying now"], ["already_paid", "Already paid via Paybill"]].map(([value, label]) => (
+                        <label key={value} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-[#0D1D34]/15 px-3 py-2 text-sm font-medium has-[:checked]:border-[#A65D6A] has-[:checked]:bg-[#FAEEF0]">
+                          <input type="radio" name="paymentChoice" value={value} checked={paymentChoice === value} onChange={() => setPaymentChoice(value)} className="size-4 shrink-0 accent-[#0D1D34]" />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
                 </fieldset>
-                {attendance && category && <p className="text-sm font-bold">Booking total: KES {formatMoney(onsitePrice)}</p>}
-                <p className="text-sm">Save the booking, then verify the payment against the official Paybill records.</p>
-                <button disabled={onsiteBusy} className="min-h-11 rounded-full bg-[#0D1D34] px-5 text-sm font-bold text-white disabled:opacity-50">
-                  {onsiteBusy ? "Saving…" : "Save and open payment verification"}
-                </button>
+                <aside className="self-start rounded-2xl border border-[#0D1D34]/10 bg-[#F7F5F5] p-5">
+                  <div aria-live="polite">
+                    <p className="text-sm font-semibold">Booking total</p>
+                    <p className="mt-2 text-3xl font-bold tabular-nums">{attendance && category ? `KES ${formatMoney(onsitePrice)}` : "—"}</p>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-[#0D1D34]/75">
+                    {paymentChoice === "already_paid" ? "Have the original M-Pesa code ready to verify." : "Verify payment after it appears in the Paybill records."}
+                  </p>
+                  <button type="submit" disabled={onsiteBusy || verifyState === "loading"} className="mt-5 min-h-12 w-full rounded-full bg-[#0D1D34] px-4 py-3 text-sm font-bold text-white hover:bg-[#233957] disabled:opacity-50">
+                    {onsiteBusy ? "Saving…" : "Save and verify payment"}
+                  </button>
+                </aside>
               </form>
             )}
           </section>
