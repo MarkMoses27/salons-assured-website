@@ -909,6 +909,10 @@ export async function GET(
               lastPaymentReference:
                 payment.lastPaymentReference,
 
+              paymentReferences: (paymentsByOrder.get(order.id) ?? [])
+                .map(entry => entry.transaction_reference)
+                .filter((reference): reference is string => Boolean(reference)),
+
               lastPaymentAt:
                 payment.lastPaymentAt,
 
@@ -979,6 +983,7 @@ export async function GET(
               row.paymentState,
               row.paymentMethod,
               row.lastPaymentReference,
+              ...row.paymentReferences,
               row.qrStatus,
               row.checkInStatus,
             ]

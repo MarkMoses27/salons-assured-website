@@ -22,6 +22,7 @@ type ScanResult =
 
 type CheckInRequestBody = {
   scannedValue?: string;
+  ticketId?: string;
   gateName?: string;
   testEventDate?: string;
 };
@@ -436,7 +437,12 @@ export async function POST(
         100,
       );
 
-  if (!scannedValue) {
+  const ticketId = typeof body.ticketId === "string" ? body.ticketId.trim() : "";
+  if (ticketId && !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(ticketId)) {
+    return jsonResponse({ ok: false, message: "Invalid ticket ID." }, 400);
+  }
+
+  if (!scannedValue && !ticketId) {
     return jsonResponse(
       {
         ok: false,
@@ -511,7 +517,7 @@ export async function POST(
       scannedValue,
     );
 
-  if (!ticketToken) {
+  if (!ticketToken && !ticketId) {
     try {
       await recordCheckIn({
         ticketId:
@@ -568,8 +574,8 @@ export async function POST(
         "id, order_id, ticket_number, attendee_full_name, attendee_email, attendee_phone, participant_category, organisation, country, ticket_status, access_token, event_date",
       )
       .eq(
-        "access_token",
-        ticketToken,
+        ticketId ? "id" : "access_token",
+        ticketId || ticketToken,
       )
       .maybeSingle();
 

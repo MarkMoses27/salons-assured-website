@@ -26,10 +26,19 @@ import {
   FormEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+import { EBBC2026, getEBBCOrderPricing } from "@/lib/ebbc2026/config";
+
+const attendanceOptions = [
+  { value: "2026-11-17", label: "Day 1 · 17 November" },
+  { value: "2026-11-18", label: "Day 2 · 18 November" },
+  { value: "both", label: "Both days · 17 and 18 November" },
+];
 
 type AuthState =
   | "loading"
@@ -135,6 +144,7 @@ type RegistrationRow = {
   paymentCount: number;
 
   lastPaymentReference: string | null;
+  paymentReferences?: string[];
   lastPaymentAt: string | null;
 
   checkInStatus:
@@ -805,6 +815,112 @@ export default function EBBC2026PaymentAdminPage() {
       sessionData.session
         ?.access_token ||
       null
+    );
+  }
+
+  const [addingAttendee, setAddingAttendee] = useState(false);
+  const [onsiteBusy, setOnsiteBusy] = useState(false);
+  const onsiteLock = useRef(false);
+  const [onsiteNotice, setOnsiteNotice] = useState("");
+  const [attendance, setAttendance] = useState("");
+  const [category, setCategory] = useState("");
+  const [paymentChoice, setPaymentChoice] = useState("paying_now");
+
+  const eventDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Nairobi", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  const dates = attendance === "both" ? [EBBC2026.dates.start, EBBC2026.dates.end] : [attendance];
+  const onsitePrice = getEBBCOrderPricing(dates.map(eventDate => ({ eventDate, category }))).totalAmountKes;
+
+  async function checkInFromResult(row: RegistrationRow) {
+    if (onsiteLock.current) return;
+    onsiteLock.current = true;
+    setOnsiteBusy(true);
+    setOnsiteNotice("");
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Sign in again to check in an attendee.");
+      const response = await fetch("/api/ebbc2026/scanner/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ticketId: row.ticketId, gateName: "Main Entrance" }),
+      });
+      const result = await response.json();
+      setOnsiteNotice(result.message || "Check-in could not be completed.");
+      if (result.scanResult === "accepted" || result.scanResult === "already_used") {
+        setRegistrations(current => current.map(ticket =>
+          ticket.ticketId === row.ticketId ? { ...ticket, checkInStatus: "checked_in" } : ticket
+        ));
+        await loadDashboard();
+      }
+    } catch (error) {
+      setOnsiteNotice(error instanceof Error ? error.message : "Check-in could not be completed.");
+    } finally {
+      onsiteLock.current = false;
+      setOnsiteBusy(false);
+    }
+  }
+
+  async function addAttendee(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (onsiteLock.current || verifyState === "loading" || !attendance || !category) return;
+    onsiteLock.current = true;
+    setOnsiteBusy(true);
+    setOnsiteNotice("");
+    const fields = new FormData(event.currentTarget);
+    const fullName = String(fields.get("fullName") || "").trim();
+    const email = String(fields.get("email") || "").trim();
+    const phone = String(fields.get("phone") || "").trim();
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Sign in again to add an attendee.");
+      const response = await fetch("/api/ebbc2026/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          buyerFullName: fullName,
+          buyerEmail: email,
+          buyerPhone: phone,
+          country: "Kenya",
+          attendees: dates.map(eventDate => ({ fullName, email, phone, category, eventDate })),
+        }),
+      });
+      const result = await response.json();
+      const reference = result.order?.orderNumber;
+      if (!response.ok || !reference) throw new Error(result.message || "Could not add attendee.");
+      setSearch(reference);
+      setPaymentFilter("all");
+      setOrderNumber(reference);
+      setMpesaCode("");
+      setAmount("");
+      setVerifyState("idle");
+      setResult(null);
+      setAddingAttendee(false);
+      setAttendance("");
+      setCategory("");
+      setPaymentChoice("paying_now");
+      setOnsiteNotice(paymentChoice === "already_paid"
+        ? `Added ${fullName}. Verify their existing Paybill payment against booking ${reference}.`
+        : `Added ${fullName}. Record their confirmed payment against booking ${reference}.`);
+      await loadDashboard();
+      document.getElementById("payment-verification")?.scrollIntoView({ behavior: "smooth" });
+      document.getElementById("mpesa-code")?.focus({ preventScroll: true });
+    } catch (error) {
+      setOnsiteNotice(error instanceof Error ? error.message : "Could not add attendee.");
+    } finally {
+      onsiteLock.current = false;
+      setOnsiteBusy(false);
+    }
+  }
+
+  function checkInAction(row: RegistrationRow) {
+    if (row.checkInStatus === "checked_in") return null;
+    if (row.paymentState !== "paid" || row.eventDate !== eventDay || !row.ticketId) return null;
+    return (
+      <button type="button" disabled={onsiteBusy} onClick={() => void checkInFromResult(row)}
+        className="m-1 min-h-10 rounded-full bg-[#0D1D34] px-4 text-xs font-bold text-white disabled:opacity-50">
+        Check in
+      </button>
     );
   }
 
@@ -1621,6 +1737,7 @@ export default function EBBC2026PaymentAdminPage() {
                   row.eventDate,
                   row.paymentMethod,
                   row.lastPaymentReference,
+                  ...(row.paymentReferences ?? []),
                   row.qrStatus,
                   row.checkInStatus,
                 ]
@@ -2382,6 +2499,47 @@ export default function EBBC2026PaymentAdminPage() {
             </button>
           </div>
 
+          <section className="mt-6 rounded-2xl border bg-white p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold">On-site attendance</h2>
+                <p className="mt-1 text-sm">Search below. Add an attendee only if you cannot find their booking.</p>
+              </div>
+              <button type="button" disabled={onsiteBusy} aria-expanded={addingAttendee}
+                onClick={() => { setAddingAttendee(!addingAttendee); setOnsiteNotice(""); }}
+                className="min-h-11 rounded-full bg-[#0D1D34] px-5 text-sm font-bold text-white">
+                {addingAttendee ? "Close form" : "Add attendee"}
+              </button>
+            </div>
+            {onsiteNotice && <p role="status" className="mt-4 rounded-xl bg-[#F7F5F5] p-3 text-sm font-semibold">{onsiteNotice}</p>}
+            {addingAttendee && (
+              <form onSubmit={addAttendee} className="mt-4 space-y-4">
+                <fieldset disabled={onsiteBusy} className="grid gap-3 sm:grid-cols-2 [&_input]:mt-1 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:p-2 [&_select]:mt-1 [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:p-2">
+                  <label>Full name<input name="fullName" autoComplete="name" required minLength={2} /></label>
+                  <label>Booking phone<input name="phone" type="tel" autoComplete="tel" required /></label>
+                  <label>Email for the ticket<input name="email" type="email" autoComplete="email" required /></label>
+                  <label>Attendance dates<select required value={attendance} onChange={event => setAttendance(event.target.value)}>
+                    <option value="">Choose dates</option>
+                    {attendanceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select></label>
+                  <label>Participant category<select required value={category} onChange={event => setCategory(event.target.value)}>
+                    <option value="">Choose category</option>
+                    {EBBC2026.participantCategories.map(item => <option key={item}>{item}</option>)}
+                  </select></label>
+                  <label>Payment<select value={paymentChoice} onChange={event => setPaymentChoice(event.target.value)}>
+                    <option value="paying_now">Paying now</option>
+                    <option value="already_paid">Already paid via Paybill</option>
+                  </select></label>
+                </fieldset>
+                {attendance && category && <p className="text-sm font-bold">Booking total: KES {formatMoney(onsitePrice)}</p>}
+                <p className="text-sm">Save the booking, then verify the payment against the official Paybill records.</p>
+                <button disabled={onsiteBusy} className="min-h-11 rounded-full bg-[#0D1D34] px-5 text-sm font-bold text-white disabled:opacity-50">
+                  {onsiteBusy ? "Saving…" : "Save and open payment verification"}
+                </button>
+              </form>
+            )}
+          </section>
+
           <section className="mt-8 overflow-hidden rounded-[28px] border border-[#0D1D34]/7 bg-white shadow-[0_20px_60px_rgba(13,29,52,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[#0D1D34]/7 p-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -2420,7 +2578,8 @@ export default function EBBC2026PaymentAdminPage() {
                           .value,
                       )
                     }
-                    placeholder="Search name, phone, order, ticket, reference..."
+                    aria-label="Search attendees"
+                    placeholder="Name, booking phone or M-Pesa code"
                     className="h-11 w-full rounded-full border border-[#0D1D34]/10 bg-[#F7F5F5] pl-11 pr-4 text-xs font-semibold outline-none transition focus:border-[#CC8591]"
                   />
                 </div>
@@ -2742,6 +2901,7 @@ export default function EBBC2026PaymentAdminPage() {
                                 <Eye className="h-3.5 w-3.5" />
                                 View
                               </button>
+                              {checkInAction(row)}
                             </td>
                           </tr>
                         ),
@@ -2877,6 +3037,7 @@ export default function EBBC2026PaymentAdminPage() {
                           <Eye className="h-4 w-4" />
                           View Details
                         </button>
+                        {checkInAction(row)}
                       </article>
                     ),
                   )}
@@ -2885,7 +3046,7 @@ export default function EBBC2026PaymentAdminPage() {
             )}
           </section>
 
-          <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+          <section id="payment-verification" className="mt-8 scroll-mt-28 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
             <div className="rounded-[28px] border border-[#0D1D34]/7 bg-[#0D1D34] p-6 text-white shadow-[0_24px_65px_rgba(13,29,52,0.15)] sm:p-8">
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-[#E8A6B2]">
                 Equity Installments
