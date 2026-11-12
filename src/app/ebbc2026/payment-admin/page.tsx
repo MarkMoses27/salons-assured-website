@@ -33,7 +33,7 @@ import {
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-import { EBBC2026, getEBBCOrderPricing, getEBBCTicketPriceKes } from "@/lib/ebbc2026/config";
+import { EBBC2026, getEBBCCheckInOpening, getEBBCOrderPricing, getEBBCTicketPriceKes } from "@/lib/ebbc2026/config";
 
 function usesDayTwoRate(category: string) {
   return getEBBCTicketPriceKes(undefined, EBBC2026.dates.end, category) < EBBC2026.ticket.standardPriceKes;
@@ -835,9 +835,17 @@ export default function EBBC2026PaymentAdminPage() {
   const [category, setCategory] = useState("");
   const [paymentChoice, setPaymentChoice] = useState<string>(defaultPaymentChoice);
 
+  const [checkInTime, setCheckInTime] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCheckInTime(Math.floor(Date.now() / 60_000) * 60_000);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const eventDay = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Nairobi", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
+  }).format(new Date(checkInTime));
   const dayTwoOnly = usesDayTwoRate(category);
   const alreadyPaid = paymentChoice === "already_paid";
   const dates = attendance === "both" ? [EBBC2026.dates.start, EBBC2026.dates.end] : [attendance];
@@ -2725,7 +2733,8 @@ export default function EBBC2026PaymentAdminPage() {
                             <ul className="mt-2 grid gap-2">
                               {paidTickets.map(ticket => {
                                 const showName = paidTickets.length > 1 || ticket.attendeeFullName !== booking.buyerFullName;
-                                const isTicketDay = ticket.eventDate === eventDay;
+                                const opening = getEBBCCheckInOpening(ticket.eventDate);
+                                const canCheckIn = ticket.eventDate === eventDay && opening !== null && checkInTime >= opening.timestamp;
                                 const dateLabel = formatEventDate(ticket.eventDate);
                                 return (
                                   <li key={ticket.ticketId} className="flex flex-wrap items-center gap-2">
@@ -2736,14 +2745,16 @@ export default function EBBC2026PaymentAdminPage() {
                                       </>
                                     ) : (
                                       <div>
-                                        <button type="button" disabled={onsiteBusy || !isTicketDay} onClick={() => void checkInFromResult(ticket)}
+                                        <button type="button" disabled={onsiteBusy || !canCheckIn} onClick={() => void checkInFromResult(ticket)}
                                           aria-label={`Check in ${ticket.attendeeFullName} · ${dateLabel} (${ticket.ticketNumber})`}
                                           className="min-h-11 rounded-lg border border-transparent bg-[#0D1D34] px-3 text-xs font-bold text-white hover:bg-[#26364E] disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-600">
                                           {showName ? `Check in · ${ticket.attendeeFullName}` : "Check in"}
                                         </button>
-                                        {(!isTicketDay || paidTickets.length > 1) && (
+                                        {(!canCheckIn || paidTickets.length > 1) && (
                                           <p className="mt-1 text-xs text-slate-600">
-                                            {isTicketDay ? dateLabel : `Ticket date: ${dateLabel}`}
+                                            {canCheckIn ? dateLabel : opening && checkInTime < opening.timestamp
+                                              ? `Check-in opens ${dateLabel} at ${opening.label} Kenya time`
+                                              : `Check-in closed · ${dateLabel}`}
                                           </p>
                                         )}
                                       </div>

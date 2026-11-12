@@ -93,6 +93,23 @@ export const EBBC2026 = {
   },
 } as const;
 
+export const EBBC_CHECK_IN_OPENING_TIMES = {
+  [EBBC2026.dates.start]: "08:00",
+  [EBBC2026.dates.end]: "08:00",
+} as const;
+
+export function getEBBCCheckInOpening(eventDate: string | null) {
+  if (eventDate !== EBBC2026.dates.start && eventDate !== EBBC2026.dates.end) return null;
+  const time = EBBC_CHECK_IN_OPENING_TIMES[eventDate];
+  const opensAt = new Date(`${eventDate}T${time}:00+03:00`);
+  return {
+    timestamp: opensAt.getTime(),
+    label: new Intl.DateTimeFormat("en-KE", {
+      timeZone: "Africa/Nairobi", hour: "numeric", minute: "2-digit", hour12: true,
+    }).format(opensAt),
+  };
+}
+
 export function isEBBCEarlyBirdActive(_now: Date = new Date()) {
   // The EBBC2026 Early Bird offer ended on 31 August 2026.
   // Keep this explicit so static/prerendered ticket pages can never

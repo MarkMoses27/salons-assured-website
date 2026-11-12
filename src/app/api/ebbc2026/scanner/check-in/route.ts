@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 
+import { EBBC2026, getEBBCCheckInOpening } from "@/lib/ebbc2026/config";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const EVENT_DATES = [
-  "2026-11-17",
-  "2026-11-18",
+  EBBC2026.dates.start,
+  EBBC2026.dates.end,
 ] as const;
 
 type EventDate =
@@ -481,14 +482,13 @@ export async function POST(
    * Production always uses
    * the real Nairobi date.
    */
-  if (
-    process.env.NODE_ENV !==
-      "production" &&
+  const simulatingEventDate =
+    process.env.NODE_ENV !== "production" &&
     body.testEventDate &&
     isEventDate(
       body.testEventDate,
-    )
-  ) {
+    );
+  if (simulatingEventDate && body.testEventDate) {
     currentEventDate =
       body.testEventDate;
   }
@@ -498,6 +498,7 @@ export async function POST(
       currentEventDate,
     )
   ) {
+    const firstOpening = getEBBCCheckInOpening(EBBC2026.dates.start);
     return jsonResponse(
       {
         ok: false,
@@ -505,11 +506,21 @@ export async function POST(
         eventOpen:
           false,
 
-        message:
-          "EBBC2026 ticket check-in is only available on 17 and 18 November 2026.",
+        message: currentEventDate < EBBC2026.dates.start && firstOpening
+          ? `Check-in opens on ${formatEventDate(EBBC2026.dates.start)} at ${firstOpening.label} Kenya time.`
+          : "Check-in for EBBC2026 has closed.",
       },
       409,
     );
+  }
+
+  const opening = getEBBCCheckInOpening(currentEventDate);
+  if (!simulatingEventDate && opening && Date.now() < opening.timestamp) {
+    return jsonResponse({
+      ok: false,
+      eventOpen: false,
+      message: `Check-in opens on ${formatEventDate(currentEventDate)} at ${opening.label} Kenya time.`,
+    }, 409);
   }
 
   const ticketToken =
