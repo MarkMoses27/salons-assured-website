@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   CreditCard,
   Download,
   Eye,
@@ -2588,39 +2589,6 @@ export default function EBBC2026PaymentAdminPage() {
                   />
                 </div>
 
-                <select
-                  value={
-                    paymentFilter
-                  }
-                  onChange={(
-                    event,
-                  ) =>
-                    setPaymentFilter(
-                      event.target
-                        .value as
-                        PaymentFilter,
-                    )
-                  }
-                  aria-label="Filter by payment status"
-                  className="h-11 rounded-full border border-[#0D1D34]/10 bg-white px-4 text-xs font-black text-[#0D1D34]"
-                >
-                  <option value="all">
-                    All Payments
-                  </option>
-
-                  <option value="paid">
-                    Paid
-                  </option>
-
-                  <option value="partial">
-                    Partial
-                  </option>
-
-                  <option value="unpaid">
-                    Unpaid
-                  </option>
-                </select>
-
                 <button
                   type="button"
                   onClick={
@@ -2636,6 +2604,20 @@ export default function EBBC2026PaymentAdminPage() {
                   Export
                 </button>
               </div>
+            </div>
+
+            <div role="group" aria-label="Filter by payment status" className="flex flex-wrap gap-1 border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
+              {([
+                ["all", "All bookings", summary.totalOrders],
+                ["paid", "Paid", summary.paidOrders],
+                ["partial", "Partial", summary.partialOrders],
+                ["unpaid", "Unpaid", summary.unpaidOrders],
+              ] as const).map(([value, label, count]) => (
+                <button key={value} type="button" aria-pressed={paymentFilter === value} onClick={() => setPaymentFilter(value)}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-bold transition-colors ${paymentFilter === value ? "bg-[#F6DFE5] text-[#542B3D]" : "text-slate-600 hover:bg-slate-100"}`}>
+                  {label}<span className="rounded-full bg-white/80 px-1.5 py-0.5 tabular-nums">{count}</span>
+                </button>
+              ))}
             </div>
 
             {dashboardLoading &&
@@ -2676,74 +2658,82 @@ export default function EBBC2026PaymentAdminPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-3 p-3 sm:p-5">
-                {bookings.map(tickets => {
-                  const booking = tickets[0];
-                  const accent = {
-                    paid: "border-l-emerald-500",
-                    partial: "border-l-amber-500",
-                    unpaid: "border-l-[#B96C86]",
-                  }[booking.paymentState];
-                  return (
-                    <article key={booking.orderId} className={`overflow-hidden rounded-2xl border border-slate-200 border-l-4 bg-white shadow-sm transition-shadow hover:shadow-md ${accent}`}>
-                      <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-center xl:gap-6">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                            <h3 className="break-words text-base font-black tracking-tight">{booking.buyerFullName}</h3>
-                            <PaymentBadge state={booking.paymentState} />
-                          </div>
-                          <p className="mt-1 break-words text-xs text-slate-600">
-                            {booking.orderNumber} · {formatDate(booking.orderCreatedAt)}
-                            {booking.buyerPhone && ` · ${booking.buyerPhone}`}
-                          </p>
-                          {booking.lastPaymentReference && (
-                            <p className="mt-1 break-words text-xs text-slate-600">Payment reference {booking.lastPaymentReference}</p>
-                          )}
-                        </div>
-                        <dl className="grid grid-cols-2 gap-4 rounded-xl bg-[#F7F5F8] px-4 py-2.5 tabular-nums xl:min-w-56">
-                          <div>
-                            <dt className="text-xs font-medium text-slate-600">Received</dt>
-                            <dd className="mt-1 text-sm font-black text-emerald-800">KES {formatMoney(booking.amountPaidKes)}</dd>
-                          </div>
-                          <div className="border-l border-slate-200 pl-4">
-                            <dt className="text-xs font-medium text-slate-600">Balance</dt>
-                            <dd className={`mt-1 text-sm font-black ${booking.balanceKes > 0 ? "text-amber-800" : "text-slate-700"}`}>KES {formatMoney(booking.balanceKes)}</dd>
-                          </div>
-                        </dl>
-                        <div className="flex flex-wrap gap-2">
-                          {booking.paymentState !== "paid" && (
-                            <button type="button" disabled={verifyState === "loading" || onsiteBusy} onClick={() => startPaymentVerification(booking.orderNumber)}
-                              className="min-h-10 rounded-xl bg-[#F6DFE5] px-4 text-xs font-bold text-[#542B3D] hover:bg-[#F0B6C2] disabled:opacity-50">
-                              Verify payment
+              <table role="table" aria-label="Booking payments" className="block w-full bg-white text-left text-sm lg:table">
+                <thead role="rowgroup" className="sr-only bg-[#F7F5F8] text-xs font-bold text-slate-600 lg:not-sr-only">
+                  <tr role="row">
+                    <th scope="col" className="px-4 py-3 sm:pl-6">Booking</th>
+                    <th scope="col" className="px-3 py-3">Status</th>
+                    <th scope="col" className="px-3 py-3 text-right">Received</th>
+                    <th scope="col" className="px-3 py-3 text-right">Balance</th>
+                    <th scope="col" className="px-3 py-3">Tickets</th>
+                    <th scope="col" className="px-4 py-3 sm:pr-6">Actions</th>
+                  </tr>
+                </thead>
+                <tbody role="rowgroup" className="block divide-y divide-slate-200 lg:table-row-group">
+                  {bookings.map(tickets => {
+                    const booking = tickets[0];
+                    const issuedTickets = tickets.filter(ticket => ticket.ticketId);
+                    const canCheckIn = booking.paymentState === "paid" && issuedTickets.some(ticket => ticket.eventDate === eventDay && ticket.checkInStatus !== "checked_in");
+                    return (
+                      <tr role="row" key={booking.orderId} className="grid grid-cols-2 gap-3 px-4 py-4 transition-colors hover:bg-[#FCFAFC] sm:px-6 lg:table-row lg:p-0">
+                        <th scope="row" className="col-span-2 min-w-0 break-words text-left font-normal lg:max-w-64 lg:py-4 lg:pl-6 lg:pr-3">
+                          <span className="block font-black">{booking.buyerFullName}</span>
+                          <span className="mt-1 block text-xs text-slate-600">{booking.orderNumber} · {formatDate(booking.orderCreatedAt)}</span>
+                          {booking.buyerPhone && <span className="mt-0.5 block text-xs text-slate-600">{booking.buyerPhone}</span>}
+                          {booking.lastPaymentReference && <span className="mt-0.5 block break-all text-xs text-slate-600">Ref. {booking.lastPaymentReference}</span>}
+                        </th>
+                        <td role="cell" className="col-span-2 lg:px-3 lg:py-4"><PaymentBadge state={booking.paymentState} /></td>
+                        <td role="cell" className="tabular-nums lg:px-3 lg:py-4 lg:text-right">
+                          <span aria-hidden="true" className="block text-xs text-slate-600 lg:hidden">Received</span>
+                          <span className="whitespace-nowrap font-bold text-emerald-800">KES {formatMoney(booking.amountPaidKes)}</span>
+                        </td>
+                        <td role="cell" className="tabular-nums lg:px-3 lg:py-4 lg:text-right">
+                          <span aria-hidden="true" className="block text-xs text-slate-600 lg:hidden">Balance</span>
+                          <span className={`whitespace-nowrap font-bold ${booking.balanceKes > 0 ? "text-amber-800" : "text-slate-600"}`}>KES {formatMoney(booking.balanceKes)}</span>
+                        </td>
+                        <td role="cell" className="col-span-2 lg:max-w-64 lg:px-3 lg:py-4">
+                          {issuedTickets.length ? (
+                            <details open={canCheckIn} className="group">
+                              <summary className="flex min-h-9 w-fit cursor-pointer list-none items-center gap-1.5 rounded-lg bg-[#F5F1F6] px-2.5 text-xs font-bold text-[#542B3D] hover:bg-[#F6DFE5] [&::-webkit-details-marker]:hidden">
+                                <TicketCheck aria-hidden="true" className="h-3.5 w-3.5" />
+                                {issuedTickets.length} {issuedTickets.length === 1 ? "ticket" : "tickets"}
+                                <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 group-open:rotate-180" />
+                              </summary>
+                              <ul className="mt-2 space-y-2">
+                                {issuedTickets.map(ticket => (
+                                  <li key={ticket.ticketId} className="rounded-lg border border-slate-200 px-2.5 py-2 text-xs">
+                                    <p className="font-bold">{ticket.attendeeFullName}</p>
+                                    <p className="mt-1 text-slate-600">{formatEventDate(ticket.eventDate)} · {ticket.ticketNumber}</p>
+                                    {ticket.participantCategory && <p className="mt-0.5 text-slate-600">{ticket.participantCategory}</p>}
+                                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                                      <CheckInBadge status={ticket.checkInStatus} />
+                                      {checkInAction(ticket)}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          ) : <span className="text-xs text-slate-600">No tickets</span>}
+                        </td>
+                        <td role="cell" className="col-span-2 lg:py-4 lg:pl-3 lg:pr-6">
+                          <div className="flex flex-wrap gap-2 lg:min-w-36">
+                            {booking.paymentState !== "paid" && (
+                              <button type="button" disabled={verifyState === "loading" || onsiteBusy} onClick={() => startPaymentVerification(booking.orderNumber)}
+                                className="min-h-9 rounded-lg bg-[#F6DFE5] px-3 text-xs font-bold text-[#542B3D] hover:bg-[#F0B6C2] disabled:opacity-50">
+                                Verify payment
+                              </button>
+                            )}
+                            <button type="button" onClick={() => void openDetails(booking.orderId)}
+                              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-bold hover:border-[#CC8591]">
+                              <Eye aria-hidden="true" className="h-4 w-4" /> View booking
                             </button>
-                          )}
-                          <button type="button" onClick={() => void openDetails(booking.orderId)}
-                            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 px-4 text-xs font-bold hover:border-[#CC8591] hover:bg-[#FCF7FA]">
-                            <Eye aria-hidden="true" className="h-4 w-4" /> View booking
-                          </button>
-                        </div>
-                      </div>
-                      {tickets.some(ticket => ticket.ticketId) && (
-                        <ul className="grid gap-2 border-t border-slate-100 bg-[#FBFAFC] px-4 py-3 sm:grid-cols-2 sm:px-5 xl:grid-cols-3">
-                          {tickets.filter(ticket => ticket.ticketId).map(ticket => (
-                            <li key={ticket.ticketId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E9E2EB] bg-white px-3 py-2">
-                              <div className="min-w-0 break-words">
-                                <p className="text-xs font-bold">{ticket.attendeeFullName}</p>
-                                <p className="mt-1 text-xs text-slate-600">{formatEventDate(ticket.eventDate)} · {ticket.ticketNumber}</p>
-                                {ticket.participantCategory && <p className="mt-0.5 text-xs text-slate-600">{ticket.participantCategory}</p>}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-1">
-                                <CheckInBadge status={ticket.checkInStatus} />
-                                {checkInAction(ticket)}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </section>
 
