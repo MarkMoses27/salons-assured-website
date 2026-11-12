@@ -1801,6 +1801,36 @@ export default function EBBC2026PaymentAdminPage() {
       ],
     );
 
+  const bookings = useMemo(() => {
+    const groups = new Map<string, RegistrationRow[]>();
+    for (const row of filteredRows) {
+      const tickets = groups.get(row.orderId);
+      if (tickets) tickets.push(row);
+      else groups.set(row.orderId, [row]);
+    }
+    return Array.from(groups.values());
+  }, [filteredRows]);
+
+  const attendanceByDay = useMemo(() => attendanceOptions.slice(0, 2).map(day => {
+    const tickets = registrations.filter(row => row.eventDate === day.value && row.ticketId);
+    return {
+      ...day,
+      total: tickets.length,
+      paid: tickets.filter(row => row.paymentState === "paid").length,
+      checkedIn: tickets.filter(row => row.checkInStatus === "checked_in").length,
+    };
+  }), [registrations]);
+
+  function startPaymentVerification(row: RegistrationRow) {
+    setOrderNumber(row.orderNumber);
+    setMpesaCode("");
+    setAmount("");
+    setVerifyState("idle");
+    setResult(null);
+    document.getElementById("payment-verification")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("mpesa-code")?.focus({ preventScroll: true });
+  }
+
   function handleExportCsv() {
     if (
       filteredRows.length ===
@@ -2326,106 +2356,49 @@ export default function EBBC2026PaymentAdminPage() {
             </div>
           ) : null}
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[24px] border border-[#0D1D34]/7 bg-white p-5 shadow-[0_16px_45px_rgba(13,29,52,0.05)]">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0D1D34]/40">
-                  Registrations
-                </span>
-
-                <Users className="h-5 w-5 text-[#CC8591]" />
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                {summary.totalOrders}
-              </div>
-
-              <div className="mt-2 text-xs font-semibold text-[#0D1D34]/45">
-                {summary.totalTickets}{" "}
-                individual ticket
-                {summary.totalTickets ===
-                1
-                  ? ""
-                  : "s"}
+          <section aria-labelledby="overview-heading" aria-busy={dashboardLoading}
+            className="mt-8 rounded-[30px] border border-[#26364E] bg-[#101C30] bg-[radial-gradient(ellipse_at_top_right,#3C3047,transparent_55%)] p-5 text-white shadow-[0_24px_60px_rgba(13,29,52,0.22)] sm:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 id="overview-heading" className="text-2xl font-black tracking-tight">Event overview</h2>
+              <nav aria-label="Dashboard shortcuts" className="flex flex-wrap gap-2 text-xs font-bold">
+                <a className="rounded-full bg-[#F0B6C2] px-4 py-2 text-[#151C30] hover:bg-[#FFD1DA]" href="#registration-records">Find a booking</a>
+                <a className="rounded-full border border-white/25 px-4 py-2 hover:bg-white/10" href="#payment-verification">Verify Paybill payment</a>
+              </nav>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+              {[
+                { label: "Bookings", value: summary.totalOrders, detail: `${summary.totalTickets} tickets`, icon: Users },
+                { label: "Money received", value: `KES ${formatMoney(summary.receivedKes)}`, detail: `${summary.paidOrders} fully paid`, icon: CreditCard },
+                { label: "Outstanding", value: `KES ${formatMoney(summary.outstandingKes)}`, detail: `${summary.partialOrders} partial · ${summary.unpaidOrders} unpaid`, icon: WalletCards },
+                { label: "Checked in", value: summary.checkedInTickets, detail: `${summary.activeTickets} active tickets`, icon: TicketCheck },
+              ].map(({ label, value, detail, icon: Icon }) => (
+                <div key={label} className="min-w-0 rounded-2xl border border-white/15 bg-white/5 p-3 transition-colors hover:bg-white/10 sm:p-5">
+                  <div className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-200">
+                    {label}<Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-[#F0B6C2]" />
+                  </div>
+                  <p className="mt-3 break-words text-lg font-black tracking-tight tabular-nums sm:text-2xl">{value}</p>
+                  <p className="mt-1 text-xs text-slate-300">{detail}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/15 bg-[#10192A]/70 p-4 sm:p-5">
+              <h3 className="flex items-center gap-2 text-sm font-bold"><CalendarDays aria-hidden="true" className="h-4 w-4 text-[#F0B6C2]" /> Attendance by day</h3>
+              <div className="mt-4 grid gap-5 md:grid-cols-2 md:gap-8">
+                {attendanceByDay.map(day => (
+                  <div key={day.value}>
+                    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-1 text-xs">
+                      <span className="font-bold">{day.label}</span>
+                      <span className="text-slate-300">{day.total} tickets</span>
+                    </div>
+                    <div aria-hidden="true" className="h-2.5 overflow-hidden rounded-full bg-white/15">
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#B775A4] to-[#F0B6C2] motion-safe:transition-[width] motion-safe:duration-500" style={{ width: `${day.total ? day.paid / day.total * 100 : 0}%` }} />
+                    </div>
+                    <p className="mt-2 text-xs text-slate-300">{day.paid} tickets on paid bookings · {day.checkedIn} checked in</p>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div className="rounded-[24px] border border-[#0D1D34]/7 bg-white p-5 shadow-[0_16px_45px_rgba(13,29,52,0.05)]">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0D1D34]/40">
-                  Money Received
-                </span>
-
-                <CreditCard className="h-5 w-5 text-emerald-600" />
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                <span className="text-sm text-[#0D1D34]/40">
-                  KES{" "}
-                </span>
-
-                {formatMoney(
-                  summary.receivedKes,
-                )}
-              </div>
-
-              <div className="mt-2 text-xs font-semibold text-[#0D1D34]/45">
-                {summary.paidOrders}{" "}
-                fully paid order
-                {summary.paidOrders ===
-                1
-                  ? ""
-                  : "s"}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-[#0D1D34]/7 bg-white p-5 shadow-[0_16px_45px_rgba(13,29,52,0.05)]">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0D1D34]/40">
-                  Outstanding
-                </span>
-
-                <WalletCards className="h-5 w-5 text-amber-600" />
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                <span className="text-sm text-[#0D1D34]/40">
-                  KES{" "}
-                </span>
-
-                {formatMoney(
-                  summary.outstandingKes,
-                )}
-              </div>
-
-              <div className="mt-2 text-xs font-semibold text-[#0D1D34]/45">
-                {summary.partialOrders}{" "}
-                partial ·{" "}
-                {summary.unpaidOrders}{" "}
-                unpaid
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-[#0D1D34]/7 bg-white p-5 shadow-[0_16px_45px_rgba(13,29,52,0.05)]">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0D1D34]/40">
-                  Event Access
-                </span>
-
-                <TicketCheck className="h-5 w-5 text-blue-600" />
-              </div>
-
-              <div className="mt-3 text-3xl font-black">
-                {summary.activeTickets}
-              </div>
-
-              <div className="mt-2 text-xs font-semibold text-[#0D1D34]/45">
-                active QR ·{" "}
-                {summary.checkedInTickets}{" "}
-                checked in
-              </div>
-            </div>
-          </div>
+          </section>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <button
@@ -2564,7 +2537,7 @@ export default function EBBC2026PaymentAdminPage() {
             )}
           </section>
 
-          <section className="mt-8 overflow-hidden rounded-[28px] border border-[#0D1D34]/7 bg-white shadow-[0_20px_60px_rgba(13,29,52,0.06)]">
+          <section id="registration-records" className="mt-8 scroll-mt-28 overflow-hidden rounded-[28px] border border-[#0D1D34]/7 bg-white shadow-[0_20px_60px_rgba(13,29,52,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[#0D1D34]/7 p-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-lg font-black">
@@ -2572,13 +2545,7 @@ export default function EBBC2026PaymentAdminPage() {
                 </h2>
 
                 <p className="mt-1 text-xs font-semibold text-[#0D1D34]/40">
-                  {filteredRows.length}{" "}
-                  ticket
-                  {filteredRows.length ===
-                  1
-                    ? ""
-                    : "s"}{" "}
-                  shown
+                  {bookings.length} {bookings.length === 1 ? "booking" : "bookings"} shown
                   {generatedAt
                     ? ` · updated ${formatDateTime(
                         generatedAt,
@@ -2695,378 +2662,61 @@ export default function EBBC2026PaymentAdminPage() {
                 </div>
               </div>
             ) : (
-              <>
-                <div className="hidden overflow-x-auto xl:block">
-                  <table className="w-full min-w-[1880px] border-collapse text-left">
-                    <thead>
-                      <tr className="bg-[#F8F7F7] text-[9px] font-black uppercase tracking-[0.12em] text-[#0D1D34]/40">
-                        <th className="px-5 py-4">
-                          Customer
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Order
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Ticket / Attendee
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Event Day
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Payment
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Paid
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Balance
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Method
-                        </th>
-
-                        <th className="px-5 py-4">
-                          QR
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Check-In
-                        </th>
-
-                        <th className="px-5 py-4">
-                          Last Payment
-                        </th>
-
-                        <th className="sticky right-0 z-30 min-w-[130px] bg-[#F8F7F7] px-5 py-4 shadow-[-14px_0_24px_rgba(13,29,52,0.06)]">
-                          Details
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {filteredRows.map(
-                        (row) => (
-                          <tr
-                            key={
-                              row.ticketId
-                            }
-                            className="group border-t border-[#0D1D34]/6 align-top transition hover:bg-[#FCFBFB]"
-                          >
-                            <td className="px-5 py-5">
-                              <div className="max-w-[210px]">
-                                <div className="text-xs font-black">
-                                  {row.buyerFullName}
-                                </div>
-
-                                <div className="mt-1 text-[11px] font-semibold text-[#0D1D34]/50">
-                                  {row.buyerPhone}
-                                </div>
-
-                                <div className="mt-0.5 break-all text-[10px] text-[#0D1D34]/40">
-                                  {row.buyerEmail}
-                                </div>
+              <div className="divide-y divide-slate-200">
+                {bookings.map(tickets => {
+                  const booking = tickets[0];
+                  return (
+                    <article key={booking.orderId} className="px-5 py-4 hover:bg-[#FCFAFB] sm:px-6">
+                      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-6">
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-black">{booking.buyerFullName}</h3>
+                          <p className="mt-1 break-words text-xs text-slate-600">
+                            {booking.orderNumber} · {formatDate(booking.orderCreatedAt)}
+                            {booking.buyerPhone && ` · ${booking.buyerPhone}`}
+                          </p>
+                          {booking.lastPaymentReference && (
+                            <p className="mt-1 break-words text-xs text-slate-600">Payment reference {booking.lastPaymentReference}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs tabular-nums">
+                          <PaymentBadge state={booking.paymentState} />
+                          <span className="font-semibold text-emerald-800">KES {formatMoney(booking.amountPaidKes)} received</span>
+                          {booking.balanceKes > 0 && <span className="font-semibold text-amber-800">KES {formatMoney(booking.balanceKes)} due</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {booking.paymentState !== "paid" && (
+                            <button type="button" disabled={verifyState === "loading" || onsiteBusy} onClick={() => startPaymentVerification(booking)}
+                              className="min-h-10 rounded-full bg-[#F6DFE5] px-4 text-xs font-bold text-[#542B3D] hover:bg-[#F0B6C2] disabled:opacity-50">
+                              Verify payment
+                            </button>
+                          )}
+                          <button type="button" onClick={() => void openDetails(booking.orderId)}
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-slate-200 px-4 text-xs font-bold hover:border-[#CC8591]">
+                            <Eye aria-hidden="true" className="h-4 w-4" /> View booking
+                          </button>
+                        </div>
+                      </div>
+                      {tickets.some(ticket => ticket.ticketId) && (
+                        <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                          {tickets.filter(ticket => ticket.ticketId).map(ticket => (
+                            <li key={ticket.ticketId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#F5F3F6] px-3 py-2">
+                              <div className="min-w-0 break-words">
+                                <p className="text-xs font-bold">{ticket.attendeeFullName}</p>
+                                <p className="mt-1 text-xs text-slate-600">{formatEventDate(ticket.eventDate)} · {ticket.ticketNumber}</p>
+                                {ticket.participantCategory && <p className="mt-0.5 text-xs text-slate-600">{ticket.participantCategory}</p>}
                               </div>
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="text-xs font-black">
-                                {row.orderNumber}
+                              <div className="flex flex-wrap items-center gap-1">
+                                <CheckInBadge status={ticket.checkInStatus} />
+                                {checkInAction(ticket)}
                               </div>
-
-                              <div className="mt-1 text-[10px] text-[#0D1D34]/40">
-                                {formatDate(
-                                  row.orderCreatedAt,
-                                )}
-                              </div>
-
-                              <div className="mt-1 text-[10px] font-bold text-[#0D1D34]/45">
-                                KES{" "}
-                                {formatMoney(
-                                  row.totalAmountKes,
-                                )}
-                              </div>
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="max-w-[220px]">
-                                <div className="text-[10px] font-black uppercase tracking-[0.06em] text-[#CC8591]">
-                                  {row.ticketNumber}
-                                </div>
-
-                                <div className="mt-1 text-xs font-black">
-                                  {row.attendeeFullName}
-                                </div>
-
-                                {row.participantCategory ? (
-                                  <div className="mt-1 text-[10px] text-[#0D1D34]/45">
-                                    {row.participantCategory}
-                                  </div>
-                                ) : null}
-                              </div>
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="inline-flex items-center gap-1.5 text-xs font-black">
-                                <CalendarDays className="h-4 w-4 text-[#CC8591]" />
-
-                                {formatEventDate(
-                                  row.eventDate,
-                                )}
-                              </div>
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <PaymentBadge
-                                state={
-                                  row.paymentState
-                                }
-                              />
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="text-xs font-black text-emerald-700">
-                                KES{" "}
-                                {formatMoney(
-                                  row.amountPaidKes,
-                                )}
-                              </div>
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div
-                                className={`text-xs font-black ${
-                                  row.balanceKes >
-                                  0
-                                    ? "text-amber-700"
-                                    : "text-[#0D1D34]/35"
-                                }`}
-                              >
-                                KES{" "}
-                                {formatMoney(
-                                  row.balanceKes,
-                                )}
-                              </div>
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="text-xs font-black">
-                                {row.paymentMethod}
-                              </div>
-
-                              {row.paymentCount >
-                              1 ? (
-                                <div className="mt-1 text-[10px] font-bold text-[#0D1D34]/40">
-                                  {row.paymentCount}{" "}
-                                  payments
-                                </div>
-                              ) : null}
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <QrBadge
-                                status={
-                                  row.qrStatus
-                                }
-                              />
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <CheckInBadge
-                                status={
-                                  row.checkInStatus
-                                }
-                              />
-
-                              {row.lastCheckInAt ? (
-                                <div className="mt-2 text-[10px] leading-4 text-[#0D1D34]/45">
-                                  {formatDateTime(
-                                    row.lastCheckInAt,
-                                  )}
-
-                                  {row.lastCheckInGate
-                                    ? ` · ${row.lastCheckInGate}`
-                                    : ""}
-                                </div>
-                              ) : null}
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="max-w-[170px]">
-                                <div className="break-all text-[10px] font-black">
-                                  {row.lastPaymentReference ||
-                                    "—"}
-                                </div>
-
-                                <div className="mt-1 text-[10px] text-[#0D1D34]/40">
-                                  {formatDateTime(
-                                    row.lastPaymentAt,
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="sticky right-0 z-20 bg-white px-5 py-5 shadow-[-14px_0_24px_rgba(13,29,52,0.06)] transition group-hover:bg-[#FCFBFB]">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void openDetails(
-                                    row.orderId,
-                                  )
-                                }
-                                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-[#0D1D34]/10 bg-white px-4 text-[10px] font-black transition hover:border-[#CC8591] hover:text-[#CC8591]"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                                View
-                              </button>
-                              {checkInAction(row)}
-                            </td>
-                          </tr>
-                        ),
+                            </li>
+                          ))}
+                        </ul>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="divide-y divide-[#0D1D34]/7 xl:hidden">
-                  {filteredRows.map(
-                    (row) => (
-                      <article
-                        key={
-                          row.ticketId
-                        }
-                        className="p-5"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <div className="text-[10px] font-black uppercase tracking-[0.08em] text-[#CC8591]">
-                              {row.ticketNumber}
-                            </div>
-
-                            <h3 className="mt-1 text-sm font-black">
-                              {row.attendeeFullName}
-                            </h3>
-
-                            <p className="mt-1 text-xs font-semibold text-[#0D1D34]/45">
-                              {row.orderNumber}
-                            </p>
-                          </div>
-
-                          <PaymentBadge
-                            state={
-                              row.paymentState
-                            }
-                          />
-                        </div>
-
-                        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.1em] text-[#0D1D34]/35">
-                              Buyer
-                            </div>
-
-                            <div className="mt-1 text-xs font-black">
-                              {row.buyerFullName}
-                            </div>
-
-                            <div className="mt-1 text-[11px] text-[#0D1D34]/45">
-                              {row.buyerPhone}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.1em] text-[#0D1D34]/35">
-                              Event Day
-                            </div>
-
-                            <div className="mt-1 text-xs font-black">
-                              {formatEventDate(
-                                row.eventDate,
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.1em] text-[#0D1D34]/35">
-                              Amount Paid
-                            </div>
-
-                            <div className="mt-1 text-xs font-black text-emerald-700">
-                              KES{" "}
-                              {formatMoney(
-                                row.amountPaidKes,
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.1em] text-[#0D1D34]/35">
-                              Balance
-                            </div>
-
-                            <div className="mt-1 text-xs font-black">
-                              KES{" "}
-                              {formatMoney(
-                                row.balanceKes,
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.1em] text-[#0D1D34]/35">
-                              Payment Method
-                            </div>
-
-                            <div className="mt-1 text-xs font-black">
-                              {row.paymentMethod}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.1em] text-[#0D1D34]/35">
-                              QR / Check-In
-                            </div>
-
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <QrBadge
-                                status={
-                                  row.qrStatus
-                                }
-                              />
-
-                              <CheckInBadge
-                                status={
-                                  row.checkInStatus
-                                }
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void openDetails(
-                              row.orderId,
-                            )
-                          }
-                          className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#0D1D34]/10 bg-[#F7F5F5] px-5 text-xs font-black transition hover:border-[#CC8591] hover:text-[#CC8591]"
-                        >
-                          <Eye className="h-4 w-4" />
-                          View Details
-                        </button>
-                        {checkInAction(row)}
-                      </article>
-                    ),
-                  )}
-                </div>
-              </>
+                    </article>
+                  );
+                })}
+              </div>
             )}
           </section>
 
