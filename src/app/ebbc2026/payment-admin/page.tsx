@@ -32,7 +32,11 @@ import {
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-import { EBBC2026, getEBBCOrderPricing } from "@/lib/ebbc2026/config";
+import { EBBC2026, getEBBCOrderPricing, getEBBCTicketPriceKes } from "@/lib/ebbc2026/config";
+
+function usesDayTwoRate(category: string) {
+  return getEBBCTicketPriceKes(undefined, EBBC2026.dates.end, category) < EBBC2026.ticket.standardPriceKes;
+}
 
 const attendanceOptions = [
   { value: "2026-11-17", label: "Day 1 · 17 November" },
@@ -829,6 +833,8 @@ export default function EBBC2026PaymentAdminPage() {
   const eventDay = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Nairobi", year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date());
+  const dayTwoOnly = usesDayTwoRate(category);
+  const alreadyPaid = paymentChoice === "already_paid";
   const dates = attendance === "both" ? [EBBC2026.dates.start, EBBC2026.dates.end] : [attendance];
   const onsitePrice = getEBBCOrderPricing(dates.map(eventDate => ({ eventDate, category }))).totalAmountKes;
 
@@ -864,6 +870,7 @@ export default function EBBC2026PaymentAdminPage() {
   async function addAttendee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (onsiteLock.current || verifyState === "loading" || !attendance || !category) return;
+    if (dayTwoOnly && attendance !== EBBC2026.dates.end) return;
     onsiteLock.current = true;
     setOnsiteBusy(true);
     setOnsiteNotice("");
@@ -889,21 +896,15 @@ export default function EBBC2026PaymentAdminPage() {
       if (!response.ok || !reference) throw new Error(result.message || "Could not add attendee.");
       setSearch(reference);
       setPaymentFilter("all");
-      setOrderNumber(reference);
-      setMpesaCode("");
-      setAmount("");
-      setVerifyState("idle");
-      setResult(null);
       setAddingAttendee(false);
       setAttendance("");
       setCategory("");
       setPaymentChoice("paying_now");
-      setOnsiteNotice(paymentChoice === "already_paid"
+      setOnsiteNotice(alreadyPaid
         ? `Added ${fullName}. Verify their existing Paybill payment against booking ${reference}.`
-        : `Added ${fullName}. Record their confirmed payment against booking ${reference}.`);
+        : `Saved booking ${reference} for ${fullName}. Use Verify payment once the payment appears in the Paybill records.`);
       await loadDashboard();
-      document.getElementById("payment-verification")?.scrollIntoView({ behavior: "smooth" });
-      document.getElementById("mpesa-code")?.focus({ preventScroll: true });
+      if (alreadyPaid) startPaymentVerification(reference);
     } catch (error) {
       setOnsiteNotice(error instanceof Error ? error.message : "Could not add attendee.");
     } finally {
@@ -1821,8 +1822,8 @@ export default function EBBC2026PaymentAdminPage() {
     };
   }), [registrations]);
 
-  function startPaymentVerification(row: RegistrationRow) {
-    setOrderNumber(row.orderNumber);
+  function startPaymentVerification(reference: string) {
+    setOrderNumber(reference);
     setMpesaCode("");
     setAmount("");
     setVerifyState("idle");
@@ -2492,23 +2493,30 @@ export default function EBBC2026PaymentAdminPage() {
                     <label className="text-sm font-semibold">Full name<input name="fullName" autoComplete="name" placeholder="Enter full name" required minLength={2} /></label>
                     <label className="text-sm font-semibold">Booking phone<input name="phone" type="tel" autoComplete="tel" placeholder="e.g. 0712 345 678" required /></label>
                   </div>
-                  <fieldset>
+                  <label className="block text-sm font-semibold">Participant category
+                    <select required value={category} onChange={event => {
+                      const nextCategory = event.target.value;
+                      setCategory(nextCategory);
+                      if (usesDayTwoRate(nextCategory)) setAttendance(EBBC2026.dates.end);
+                      else if (!nextCategory || dayTwoOnly) setAttendance("");
+                    }} className="mt-2 min-h-12 w-full rounded-xl border border-[#0D1D34]/20 bg-[#F7F5F5] px-3 font-normal">
+                      <option value="">Choose category</option>
+                      {EBBC2026.participantCategories.map(item => <option key={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <fieldset disabled={!category}>
                     <legend className="text-sm font-semibold">Attendance dates</legend>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                      {attendanceOptions.map(option => (
-                        <label key={option.value} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-[#0D1D34]/15 px-3 py-2 text-sm font-medium has-[:checked]:border-[#A65D6A] has-[:checked]:bg-[#FAEEF0]">
+                    {!category && <p className="mt-1 text-xs text-slate-600">Choose a participant category to select dates.</p>}
+                    {dayTwoOnly && <p className="mt-1 text-xs text-slate-600">This category attends Day 2 only.</p>}
+                    <div className={`mt-2 grid gap-2 ${dayTwoOnly ? "" : "sm:grid-cols-3"}`}>
+                      {attendanceOptions.filter(option => !dayTwoOnly || option.value === EBBC2026.dates.end).map(option => (
+                        <label key={option.value} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-[#0D1D34]/15 px-3 py-2 text-sm font-medium has-[:checked]:border-[#A65D6A] has-[:checked]:bg-[#FAEEF0] has-[:disabled]:cursor-default has-[:disabled]:opacity-50">
                           <input type="radio" name="attendance" required value={option.value} checked={attendance === option.value} onChange={() => setAttendance(option.value)} className="size-4 shrink-0 accent-[#0D1D34]" />
                           {option.label}
                         </label>
                       ))}
                     </div>
                   </fieldset>
-                  <label className="block text-sm font-semibold">Participant category
-                    <select required value={category} onChange={event => setCategory(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-[#0D1D34]/20 bg-[#F7F5F5] px-3 font-normal">
-                      <option value="">Choose category</option>
-                      {EBBC2026.participantCategories.map(item => <option key={item}>{item}</option>)}
-                    </select>
-                  </label>
                   <fieldset>
                     <legend className="text-sm font-semibold">Payment</legend>
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -2527,10 +2535,10 @@ export default function EBBC2026PaymentAdminPage() {
                     <p className="mt-2 text-3xl font-bold tabular-nums">{attendance && category ? `KES ${formatMoney(onsitePrice)}` : "—"}</p>
                   </div>
                   <p className="mt-3 text-sm leading-6 text-[#0D1D34]/75">
-                    {paymentChoice === "already_paid" ? "Have the original M-Pesa code ready to verify." : "Verify payment after it appears in the Paybill records."}
+                    {alreadyPaid ? "Have the original M-Pesa code ready to verify." : "Save the booking, then verify once the payment appears in the Paybill records."}
                   </p>
-                  <button type="submit" disabled={onsiteBusy || verifyState === "loading"} className="mt-5 min-h-12 w-full rounded-full bg-[#0D1D34] px-4 py-3 text-sm font-bold text-white hover:bg-[#233957] disabled:opacity-50">
-                    {onsiteBusy ? "Saving…" : "Save and verify payment"}
+                  <button type="submit" disabled={onsiteBusy || verifyState === "loading" || !category || !attendance} className="mt-5 min-h-12 w-full rounded-full bg-[#0D1D34] px-4 py-3 text-sm font-bold text-white hover:bg-[#233957] disabled:opacity-50">
+                    {onsiteBusy ? "Saving…" : alreadyPaid ? "Save and open verification" : "Save booking"}
                   </button>
                 </aside>
               </form>
@@ -2685,7 +2693,7 @@ export default function EBBC2026PaymentAdminPage() {
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {booking.paymentState !== "paid" && (
-                            <button type="button" disabled={verifyState === "loading" || onsiteBusy} onClick={() => startPaymentVerification(booking)}
+                            <button type="button" disabled={verifyState === "loading" || onsiteBusy} onClick={() => startPaymentVerification(booking.orderNumber)}
                               className="min-h-10 rounded-full bg-[#F6DFE5] px-4 text-xs font-bold text-[#542B3D] hover:bg-[#F0B6C2] disabled:opacity-50">
                               Verify payment
                             </button>
