@@ -38,6 +38,9 @@ function usesDayTwoRate(category: string) {
   return getEBBCTicketPriceKes(undefined, EBBC2026.dates.end, category) < EBBC2026.ticket.standardPriceKes;
 }
 
+const staffParticipantCategories = [...EBBC2026.participantCategories.filter(item => item !== "Other"), "Sponsor", "Other"];
+const defaultPaymentChoice = "already_paid";
+
 const attendanceOptions = [
   { value: "2026-11-17", label: "Day 1 · 17 November" },
   { value: "2026-11-18", label: "Day 2 · 18 November" },
@@ -828,7 +831,7 @@ export default function EBBC2026PaymentAdminPage() {
   const [onsiteNotice, setOnsiteNotice] = useState("");
   const [attendance, setAttendance] = useState("");
   const [category, setCategory] = useState("");
-  const [paymentChoice, setPaymentChoice] = useState("paying_now");
+  const [paymentChoice, setPaymentChoice] = useState<string>(defaultPaymentChoice);
 
   const eventDay = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Nairobi", year: "numeric", month: "2-digit", day: "2-digit",
@@ -899,7 +902,7 @@ export default function EBBC2026PaymentAdminPage() {
       setAddingAttendee(false);
       setAttendance("");
       setCategory("");
-      setPaymentChoice("paying_now");
+      setPaymentChoice(defaultPaymentChoice);
       setOnsiteNotice(alreadyPaid
         ? `Added ${fullName}. Verify their existing Paybill payment against booking ${reference}.`
         : `Saved booking ${reference} for ${fullName}. Use Verify payment once the payment appears in the Paybill records.`);
@@ -2501,7 +2504,7 @@ export default function EBBC2026PaymentAdminPage() {
                       else if (!nextCategory || dayTwoOnly) setAttendance("");
                     }} className="mt-2 min-h-12 w-full rounded-xl border border-[#0D1D34]/20 bg-[#F7F5F5] px-3 font-normal">
                       <option value="">Choose category</option>
-                      {EBBC2026.participantCategories.map(item => <option key={item}>{item}</option>)}
+                      {staffParticipantCategories.map(item => <option key={item}>{item}</option>)}
                     </select>
                   </label>
                   <fieldset disabled={!category}>
