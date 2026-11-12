@@ -2550,14 +2550,14 @@ export default function EBBC2026PaymentAdminPage() {
             )}
           </section>
 
-          <section id="registration-records" className="mt-8 scroll-mt-28 overflow-hidden rounded-[28px] border border-[#0D1D34]/7 bg-white shadow-[0_20px_60px_rgba(13,29,52,0.06)]">
-            <div className="flex flex-col gap-4 border-b border-[#0D1D34]/7 p-5 lg:flex-row lg:items-center lg:justify-between">
+          <section id="registration-records" className="mt-8 scroll-mt-28 overflow-hidden rounded-[28px] border border-[#0D1D34]/7 bg-[#F4F1F4] shadow-[0_20px_60px_rgba(13,29,52,0.08)]">
+            <div className="flex flex-col gap-4 border-b border-white/10 bg-[#101C30] bg-[radial-gradient(ellipse_at_top_right,#40334C,transparent_70%)] p-5 text-white sm:px-7 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-lg font-black">
-                  Registration Records
+                <h2 className="text-2xl font-black tracking-tight">
+                  Booking activity
                 </h2>
 
-                <p className="mt-1 text-xs font-semibold text-[#0D1D34]/40">
+                <p className="mt-1 text-xs font-semibold text-slate-300">
                   {bookings.length} {bookings.length === 1 ? "booking" : "bookings"} shown
                   {generatedAt
                     ? ` · updated ${formatDateTime(
@@ -2582,9 +2582,9 @@ export default function EBBC2026PaymentAdminPage() {
                           .value,
                       )
                     }
-                    aria-label="Search attendees"
+                    aria-label="Search bookings"
                     placeholder="Name, booking phone or M-Pesa code"
-                    className="h-11 w-full rounded-full border border-[#0D1D34]/10 bg-[#F7F5F5] pl-11 pr-4 text-xs font-semibold outline-none transition focus:border-[#CC8591]"
+                    className="h-11 w-full rounded-full border border-[#0D1D34]/10 bg-white pl-11 text-[#0D1D34] pr-4 text-xs font-semibold outline-none transition focus:border-[#CC8591]"
                   />
                 </div>
 
@@ -2601,7 +2601,8 @@ export default function EBBC2026PaymentAdminPage() {
                         PaymentFilter,
                     )
                   }
-                  className="h-11 rounded-full border border-[#0D1D34]/10 bg-[#F7F5F5] px-4 text-xs font-black outline-none"
+                  aria-label="Filter by payment status"
+                  className="h-11 rounded-full border border-[#0D1D34]/10 bg-white px-4 text-xs font-black text-[#0D1D34]"
                 >
                   <option value="all">
                     All Payments
@@ -2629,7 +2630,7 @@ export default function EBBC2026PaymentAdminPage() {
                     filteredRows.length ===
                     0
                   }
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#0D1D34] px-5 text-xs font-black text-white transition hover:bg-[#172c4c] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#F0B6C2] px-5 text-xs font-black text-[#151C30] transition hover:bg-[#FFD1DA] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Download className="h-4 w-4" />
                   Export
@@ -2675,14 +2676,22 @@ export default function EBBC2026PaymentAdminPage() {
                 </div>
               </div>
             ) : (
-              <div className="divide-y divide-slate-200">
+              <div className="grid gap-3 p-3 sm:p-5">
                 {bookings.map(tickets => {
                   const booking = tickets[0];
+                  const accent = {
+                    paid: "border-l-emerald-500",
+                    partial: "border-l-amber-500",
+                    unpaid: "border-l-[#B96C86]",
+                  }[booking.paymentState];
                   return (
-                    <article key={booking.orderId} className="px-5 py-4 hover:bg-[#FCFAFB] sm:px-6">
-                      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-6">
+                    <article key={booking.orderId} className={`overflow-hidden rounded-2xl border border-slate-200 border-l-4 bg-white shadow-sm transition-shadow hover:shadow-md ${accent}`}>
+                      <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-center xl:gap-6">
                         <div className="min-w-0">
-                          <h3 className="break-words text-sm font-black">{booking.buyerFullName}</h3>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                            <h3 className="break-words text-base font-black tracking-tight">{booking.buyerFullName}</h3>
+                            <PaymentBadge state={booking.paymentState} />
+                          </div>
                           <p className="mt-1 break-words text-xs text-slate-600">
                             {booking.orderNumber} · {formatDate(booking.orderCreatedAt)}
                             {booking.buyerPhone && ` · ${booking.buyerPhone}`}
@@ -2691,28 +2700,33 @@ export default function EBBC2026PaymentAdminPage() {
                             <p className="mt-1 break-words text-xs text-slate-600">Payment reference {booking.lastPaymentReference}</p>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs tabular-nums">
-                          <PaymentBadge state={booking.paymentState} />
-                          <span className="font-semibold text-emerald-800">KES {formatMoney(booking.amountPaidKes)} received</span>
-                          {booking.balanceKes > 0 && <span className="font-semibold text-amber-800">KES {formatMoney(booking.balanceKes)} due</span>}
-                        </div>
+                        <dl className="grid grid-cols-2 gap-4 rounded-xl bg-[#F7F5F8] px-4 py-2.5 tabular-nums xl:min-w-56">
+                          <div>
+                            <dt className="text-xs font-medium text-slate-600">Received</dt>
+                            <dd className="mt-1 text-sm font-black text-emerald-800">KES {formatMoney(booking.amountPaidKes)}</dd>
+                          </div>
+                          <div className="border-l border-slate-200 pl-4">
+                            <dt className="text-xs font-medium text-slate-600">Balance</dt>
+                            <dd className={`mt-1 text-sm font-black ${booking.balanceKes > 0 ? "text-amber-800" : "text-slate-700"}`}>KES {formatMoney(booking.balanceKes)}</dd>
+                          </div>
+                        </dl>
                         <div className="flex flex-wrap gap-2">
                           {booking.paymentState !== "paid" && (
                             <button type="button" disabled={verifyState === "loading" || onsiteBusy} onClick={() => startPaymentVerification(booking.orderNumber)}
-                              className="min-h-10 rounded-full bg-[#F6DFE5] px-4 text-xs font-bold text-[#542B3D] hover:bg-[#F0B6C2] disabled:opacity-50">
+                              className="min-h-10 rounded-xl bg-[#F6DFE5] px-4 text-xs font-bold text-[#542B3D] hover:bg-[#F0B6C2] disabled:opacity-50">
                               Verify payment
                             </button>
                           )}
                           <button type="button" onClick={() => void openDetails(booking.orderId)}
-                            className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-slate-200 px-4 text-xs font-bold hover:border-[#CC8591]">
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 px-4 text-xs font-bold hover:border-[#CC8591] hover:bg-[#FCF7FA]">
                             <Eye aria-hidden="true" className="h-4 w-4" /> View booking
                           </button>
                         </div>
                       </div>
                       {tickets.some(ticket => ticket.ticketId) && (
-                        <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        <ul className="grid gap-2 border-t border-slate-100 bg-[#FBFAFC] px-4 py-3 sm:grid-cols-2 sm:px-5 xl:grid-cols-3">
                           {tickets.filter(ticket => ticket.ticketId).map(ticket => (
-                            <li key={ticket.ticketId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#F5F3F6] px-3 py-2">
+                            <li key={ticket.ticketId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E9E2EB] bg-white px-3 py-2">
                               <div className="min-w-0 break-words">
                                 <p className="text-xs font-bold">{ticket.attendeeFullName}</p>
                                 <p className="mt-1 text-xs text-slate-600">{formatEventDate(ticket.eventDate)} · {ticket.ticketNumber}</p>
