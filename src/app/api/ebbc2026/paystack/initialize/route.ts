@@ -126,6 +126,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!order.buyer_email) {
+      return NextResponse.json(
+        { ok: false, message: "Ask Payment Admin to verify payment for this on-site booking." },
+        { status: 400 },
+      );
+    }
+
     if (
       order.payment_status === "paid" ||
       order.order_status === "paid" ||

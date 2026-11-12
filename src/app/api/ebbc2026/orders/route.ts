@@ -31,6 +31,7 @@ type AttendeeInput = {
 };
 
 type CreateOrderBody = {
+  staffBooking?: boolean;
   buyerFullName?: string;
   buyerEmail?: string;
   buyerPhone?: string;
@@ -87,11 +88,24 @@ export async function POST(
       (await request.json()) as
         CreateOrderBody;
 
+    const staffBooking = body.staffBooking === true;
+    if (staffBooking) {
+      const { GET: verifyStaffSession } = await import("../scanner/session/route");
+      const session = await verifyStaffSession(request);
+      const staff = await session.json();
+      if (!session.ok || !staff.authorized || staff.staff?.role !== "admin") {
+        return NextResponse.json(
+          { ok: false, message: "Sign in as a Payment Admin to add an attendee without email." },
+          { status: session.status === 401 ? 401 : 403 },
+        );
+      }
+    }
+
     const buyerFullName =
       cleanText(body.buyerFullName);
 
     const buyerEmail =
-      normaliseEmail(body.buyerEmail);
+      staffBooking ? "" : normaliseEmail(body.buyerEmail);
 
     const buyerPhone =
       cleanText(body.buyerPhone);
@@ -131,7 +145,7 @@ export async function POST(
     }
 
     if (
-      !isValidEmail(buyerEmail)
+      !staffBooking && !isValidEmail(buyerEmail)
     ) {
       return NextResponse.json(
         {
@@ -229,7 +243,7 @@ export async function POST(
           }
 
           if (
-            !isValidEmail(email)
+            !staffBooking && !isValidEmail(email)
           ) {
             throw new Error(
               `Please enter a valid email for attendee ${
@@ -487,7 +501,7 @@ export async function POST(
             attendee.fullName,
 
           attendee_email:
-            attendee.email,
+            staffBooking ? null : attendee.email,
 
           attendee_phone:
             attendee.phone,

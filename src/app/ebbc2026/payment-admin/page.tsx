@@ -869,20 +869,19 @@ export default function EBBC2026PaymentAdminPage() {
     setOnsiteNotice("");
     const fields = new FormData(event.currentTarget);
     const fullName = String(fields.get("fullName") || "").trim();
-    const email = String(fields.get("email") || "").trim();
     const phone = String(fields.get("phone") || "").trim();
     try {
       const token = await getAccessToken();
       if (!token) throw new Error("Sign in again to add an attendee.");
       const response = await fetch("/api/ebbc2026/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
+          staffBooking: true,
           buyerFullName: fullName,
-          buyerEmail: email,
           buyerPhone: phone,
           country: "Kenya",
-          attendees: dates.map(eventDate => ({ fullName, email, phone, category, eventDate })),
+          attendees: dates.map(eventDate => ({ fullName, phone, category, eventDate })),
         }),
       });
       const result = await response.json();
@@ -2517,7 +2516,6 @@ export default function EBBC2026PaymentAdminPage() {
                 <fieldset disabled={onsiteBusy} className="grid gap-3 sm:grid-cols-2 [&_input]:mt-1 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:p-2 [&_select]:mt-1 [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:p-2">
                   <label>Full name<input name="fullName" autoComplete="name" required minLength={2} /></label>
                   <label>Booking phone<input name="phone" type="tel" autoComplete="tel" required /></label>
-                  <label>Email for the ticket<input name="email" type="email" autoComplete="email" required /></label>
                   <label>Attendance dates<select required value={attendance} onChange={event => setAttendance(event.target.value)}>
                     <option value="">Choose dates</option>
                     {attendanceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}

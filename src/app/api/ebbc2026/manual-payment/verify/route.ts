@@ -220,11 +220,13 @@ async function sendInstallmentNotificationSafely({
 }
 
 async function activateOrderAndTickets({
+  hasBuyerEmail,
   orderId,
   orderNumber,
   paymentId,
   verifiedAt,
 }: {
+  hasBuyerEmail: boolean;
   orderId: string;
   orderNumber: string;
   paymentId: string;
@@ -307,11 +309,9 @@ async function activateOrderAndTickets({
     };
   }
 
-  const emailResult =
-    await sendTicketEmailsSafely(
-      orderId,
-      orderNumber,
-    );
+  const emailResult = hasBuyerEmail
+    ? await sendTicketEmailsSafely(orderId, orderNumber)
+    : null;
 
   return {
     ok: true as const,
@@ -762,6 +762,7 @@ export async function POST(
         const activation =
           await activateOrderAndTickets(
             {
+              hasBuyerEmail: Boolean(order.buyer_email),
               orderId:
                 order.id,
               orderNumber:
@@ -873,6 +874,7 @@ export async function POST(
         const activation =
           await activateOrderAndTickets(
             {
+              hasBuyerEmail: Boolean(order.buyer_email),
               orderId:
                 order.id,
               orderNumber:
@@ -1175,6 +1177,7 @@ export async function POST(
     const activation =
       await activateOrderAndTickets(
         {
+          hasBuyerEmail: Boolean(order.buyer_email),
           orderId:
             order.id,
 
@@ -1246,7 +1249,9 @@ export async function POST(
         true,
 
       message:
-        "Final payment verified successfully. The registration is fully paid, the EBBC2026 QR ticket is active, and the ticket email has been processed.",
+        order.buyer_email
+          ? "Final payment verified. The ticket is active and email delivery was processed."
+          : "Final payment verified. Find the attendee by name or phone to check them in.",
 
       orderNumber:
         order.order_number,
